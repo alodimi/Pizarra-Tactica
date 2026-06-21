@@ -96,6 +96,85 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   }
 }
 
+/* ==================== TOAST & CUSTOM CONFIRM SYSTEM ==================== */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10005;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 320px;
+  width: calc(100% - 40px);
+}
+.toast-notification {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 4px solid var(--blue);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg), 0 4px 16px rgba(0, 0, 0, 0.35);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  cursor: pointer;
+  user-select: none;
+}
+.toast-notification.success { border-left-color: var(--green); }
+.toast-notification.error { border-left-color: var(--red); }
+.toast-notification.warning { border-left-color: var(--amber); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-8px) scale(0.95); }
+}
+
+#custom-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+.confirm-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  width: calc(100% - 32px);
+  max-width: 380px;
+  padding: 20px;
+  box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* ==================== PIZARRA ==================== */
 #panel-pizarra { flex-direction: row; }
 #pizarra-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -258,9 +337,9 @@ body.light-theme .custom-checkbox-container input:checked ~ .checkmark:after {
 .pos-DEL { background: rgba(255,193,7,.15); color: #FFC107; border: 1px solid rgba(255,193,7,.3); }
 
 /* DETAILS CARDS */
-details.analysis-card > summary, details.squad-filters > summary { list-style: none; }
-details.analysis-card > summary::-webkit-details-marker, details.squad-filters > summary::-webkit-details-marker { display: none; }
-details.analysis-card[open] > summary .details-arrow, details.squad-filters[open] > summary .details-arrow { transform: rotate(-180deg); }
+details.analysis-card > summary, details.squad-filters > summary, details.sb-section > summary { list-style: none; }
+details.analysis-card > summary::-webkit-details-marker, details.squad-filters > summary::-webkit-details-marker, details.sb-section > summary::-webkit-details-marker { display: none; }
+details.analysis-card[open] > summary .details-arrow, details.squad-filters[open] > summary .details-arrow, details.sb-section[open] > summary .details-arrow { transform: rotate(-180deg); }
 
 /* LIGHT THEME POS BADGES OVERRIDES */
 body.light-theme .pos-POR { background: rgba(217,119,6,.15); color: #d97706; border-color: rgba(217,119,6,.3); }
@@ -469,6 +548,8 @@ body.light-theme .pos-DEL { background: rgba(180,83,9,.15); color: #b45309; bord
 #customization-modal-overlay.open { display: flex; }
 #analysis-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 105; align-items: center; justify-content: center; }
 #analysis-modal-overlay.open { display: flex; }
+#drawing-options-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 106; align-items: center; justify-content: center; }
+#drawing-options-modal-overlay.open { display: flex; }
 
 #season-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 107; align-items: center; justify-content: center; }
 #season-modal-overlay.open { display: flex; }
@@ -586,6 +667,7 @@ body.light-theme .modal {
   background: var(--bg4) !important;
 }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes playerFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes modalShake {
   0%, 100% { transform: translateX(0); }
   15%, 45%, 75% { transform: translateX(-5px); }
@@ -1105,8 +1187,8 @@ body.mobile-mode .mobile-hint { display: block !important; }
 body.mobile-mode input, body.mobile-mode select, body.mobile-mode textarea { font-size: 16px !important; }
 
 /* MOBILE MODALS: FULL SCREEN & APP-LIKE */
-body.mobile-mode #modal-overlay, body.mobile-mode #coach-modal-overlay, body.mobile-mode #formation-modal-overlay, body.mobile-mode #customization-modal-overlay, body.mobile-mode #analysis-modal-overlay, body.mobile-mode #season-modal-overlay, body.mobile-mode #saved-formations-modal-overlay, body.mobile-mode #tm-import-modal-overlay, body.mobile-mode #match-log-modal-overlay, body.mobile-mode #match-history-modal-overlay, body.mobile-mode #player-profile-modal-overlay, body.mobile-mode #preview-modal-overlay, body.mobile-mode #single-stat-modal-overlay, body.mobile-mode #alignment-modal-overlay, body.mobile-mode #comparison-modal-overlay { padding: 0; }
-body.mobile-mode #modal-overlay .modal, body.mobile-mode #coach-modal-overlay .modal, body.mobile-mode #formation-modal-overlay .modal, body.mobile-mode #customization-modal-overlay .modal, body.mobile-mode #analysis-modal-overlay .modal, body.mobile-mode #season-modal-overlay .modal, body.mobile-mode #saved-formations-modal-overlay .modal, body.mobile-mode #tm-import-modal-overlay .modal, body.mobile-mode #match-log-modal-overlay .modal, body.mobile-mode #match-history-modal-overlay .modal, body.mobile-mode #player-profile-modal-overlay .modal, body.mobile-mode #preview-modal-overlay .modal, body.mobile-mode #single-stat-modal-overlay .modal, body.mobile-mode #alignment-modal-overlay .modal, body.mobile-mode #comparison-modal-overlay .modal { padding: 20px 16px; width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100% !important; border-radius: 0; border: none; display: flex; flex-direction: column; overflow-y: auto !important; }
+body.mobile-mode #modal-overlay, body.mobile-mode #coach-modal-overlay, body.mobile-mode #formation-modal-overlay, body.mobile-mode #customization-modal-overlay, body.mobile-mode #analysis-modal-overlay, body.mobile-mode #season-modal-overlay, body.mobile-mode #saved-formations-modal-overlay, body.mobile-mode #tm-import-modal-overlay, body.mobile-mode #match-log-modal-overlay, body.mobile-mode #match-history-modal-overlay, body.mobile-mode #player-profile-modal-overlay, body.mobile-mode #preview-modal-overlay, body.mobile-mode #single-stat-modal-overlay, body.mobile-mode #alignment-modal-overlay, body.mobile-mode #comparison-modal-overlay, body.mobile-mode #drawing-options-modal-overlay { padding: 0; }
+body.mobile-mode #modal-overlay .modal, body.mobile-mode #coach-modal-overlay .modal, body.mobile-mode #formation-modal-overlay .modal, body.mobile-mode #customization-modal-overlay .modal, body.mobile-mode #analysis-modal-overlay .modal, body.mobile-mode #season-modal-overlay .modal, body.mobile-mode #saved-formations-modal-overlay .modal, body.mobile-mode #tm-import-modal-overlay .modal, body.mobile-mode #match-log-modal-overlay .modal, body.mobile-mode #match-history-modal-overlay .modal, body.mobile-mode #player-profile-modal-overlay .modal, body.mobile-mode #preview-modal-overlay .modal, body.mobile-mode #single-stat-modal-overlay .modal, body.mobile-mode #alignment-modal-overlay .modal, body.mobile-mode #comparison-modal-overlay .modal, body.mobile-mode #drawing-options-modal-overlay .modal { padding: 20px 16px; width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100% !important; border-radius: 0; border: none; display: flex; flex-direction: column; overflow-y: auto !important; }
 body.mobile-mode .modal > div[style*="max-height"] { max-height: none !important; flex: 1; overflow-y: auto; padding-right: 4px !important; }
 body.mobile-mode .modal-actions { flex-direction: row; gap: 10px; margin-top: auto !important; padding-top: 16px; }
 body.mobile-mode .modal-actions button { flex: 1; padding: 14px !important; font-size: 16px !important; justify-content: center; }
@@ -1530,7 +1612,7 @@ body.read-only-mode .write-control { display: none !important; }
       <div id="tabs">
         <div class="tab active" onclick="showPanel('pizarra')"><span class="tab-icon">⚽</span> <span class="tab-label">Pizarra</span></div>
         <div class="tab" onclick="showPanel('plantilla')"><span class="tab-icon">👥</span> <span class="tab-label-pc">Plantilla</span><span class="tab-label-mobile" style="display:none;">Equipo</span></div>
-        <div class="tab" onclick="showPanel('analisis')"><span class="tab-icon">📊</span> <span class="tab-label-pc">Análisis</span><span class="tab-label-mobile" style="display:none;">Stats</span></div>
+        <div class="tab" onclick="showPanel('analisis')"><span class="tab-icon">📊</span> <span class="tab-label-pc">Análisis</span><span class="tab-label-mobile" style="display:none;">Análisis</span></div>
       </div>
     </div>
     <div id="header-right" style="display:flex;gap:8px;align-items:center; flex-wrap:nowrap; justify-content:flex-end;">
@@ -1553,9 +1635,9 @@ body.read-only-mode .write-control { display: none !important; }
     <div class="panel active" id="panel-pizarra" style="flex-direction: row;">
       <div id="sidebar">
         <!-- SECCIÓN 1: ALINEACIÓN Y CAMPO -->
-        <div class="sb-section">
-          <div class="sb-label">Alineación y Campo</div>
-          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
+        <details class="sb-section" open style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+          <summary class="sb-label" style="margin:0; cursor:pointer; outline:none; user-select:none; display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">📋 Alineación y Campo <span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
             <div>
               <div class="sb-label" style="font-size:9px; color:var(--text2); text-transform:none; margin-bottom:4px;">Formación</div>
               <div class="formation-grid">
@@ -1595,86 +1677,74 @@ body.read-only-mode .write-control { display: none !important; }
               </div>
             </div>
           </div>
-        </div>
+        </details>
+
         <!-- SECCIÓN 3: HERRAMIENTAS DE DIBUJO -->
-        <div class="sb-section">
-          <div class="sb-label">Herramientas de dibujo</div>
-          <div class="formation-grid">
-            <button class="fmn-btn" id="btn-tool-free" onclick="setTool('free')">Libre</button>
-            <button class="fmn-btn" id="btn-tool-arrow" onclick="setTool('arrow')">Flecha</button>
-            <button class="fmn-btn" id="btn-tool-curved_arrow" onclick="setTool('curved_arrow')">Fl. Curva</button>
-            <button class="fmn-btn" id="btn-tool-circle" onclick="setTool('circle')">Círculo</button>
-            <button class="fmn-btn" id="btn-tool-eraser" onclick="setTool('eraser')" style="color: var(--red2);">Goma</button>
-          </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; margin:4px 2px 2px;">
-            <span style="font-size:11px; color:var(--text3); font-weight: 500;">Color del trazo:</span>
-            <input type="color" id="drawing-color-picker" value="#ffdc32" onchange="setDrawingColor(this.value)" style="width:28px; height:24px; padding:0; border:none; background:transparent; cursor:pointer;">
-          </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; margin:6px 2px 4px;">
-            <span style="font-size:11px; color:var(--text3); font-weight: 500;">Rellenar figuras:</span>
-            <label style="position: relative; display: inline-block; width: 34px; height: 20px; cursor: pointer;">
-              <input type="checkbox" id="drawing-fill-checkbox" onchange="setFillShapes(this.checked)" style="display:none;">
-              <span id="drawing-fill-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .2s; border-radius: 20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);"></span>
-              <span id="drawing-fill-knob" style="position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background-color: white; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transform: translateX(0px);"></span>
-            </label>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:4px; margin:6px 2px 4px;">
-            <span style="font-size:11px; color:var(--text3); font-weight: 500;">Grosor del pincel:</span>
-            <div class="brush-size-group" style="display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--bg3); height:28px;">
-              <button id="btn-brush-1" class="brush-size-btn active" onclick="setBrushWeight(2.0)" style="flex:1; background:transparent; border:none; color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Fino (Tecla 1)">1</button>
-              <button id="btn-brush-2" class="brush-size-btn" onclick="setBrushWeight(3.2)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Medio (Tecla 2)">2</button>
-              <button id="btn-brush-3" class="brush-size-btn" onclick="setBrushWeight(5.0)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Grueso (Tecla 3)">3</button>
-              <button id="btn-brush-4" class="brush-size-btn" onclick="setBrushWeight(8.0)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Relleno (Tecla 4)">4</button>
+        <details class="sb-section" open style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+          <summary class="sb-label" style="margin:0; cursor:pointer; outline:none; user-select:none; display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">✏️ Herramientas de dibujo <span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="sb-label" style="margin:0; font-size:9px; color:var(--text2); text-transform:none;">Herramientas</div>
+              <button class="sb-btn" onclick="openDrawingOptionsModal()" style="padding:4px 8px; font-size:11px; gap:4px; width:auto; border-radius:6px; background:var(--bg3);" title="Configurar trazo y colores">
+                ⚙️ Opciones
+              </button>
+            </div>
+            <div class="formation-grid">
+              <button class="fmn-btn" id="btn-tool-free" onclick="setTool('free')">Libre</button>
+              <button class="fmn-btn" id="btn-tool-arrow" onclick="setTool('arrow')">Flecha</button>
+              <button class="fmn-btn" id="btn-tool-curved_arrow" onclick="setTool('curved_arrow')">Fl. Curva</button>
+              <button class="fmn-btn" id="btn-tool-circle" onclick="setTool('circle')">Círculo</button>
+              <button class="fmn-btn" id="btn-tool-eraser" onclick="setTool('eraser')" style="color: var(--red2);">Goma</button>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px; border-top:1px dashed var(--border); padding-top:6px;">
+              <span style="font-size:11px; color:var(--text3); font-weight: 500;">Rellenar figuras:</span>
+              <label class="main-toggle-switch">
+                <input type="checkbox" id="drawing-fill-sidebar" onchange="setFillShapes(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 5px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+              <button class="sb-btn" onclick="undoLastDrawing()" style="flex:1; justify-content:center; padding: 6px; gap: 4px;" title="Deshacer trazo (dibujo)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg>
+                <span style="font-size:10px;">Trazo</span>
+              </button>
+              <button class="sb-btn" onclick="performGlobalUndo()" style="flex:1; justify-content:center; padding: 6px; gap: 4px;" title="Deshacer movimiento/táctica (Pizarra)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span style="font-size:10px;">Pizarra</span>
+              </button>
+              <button class="sb-btn" onclick="confirmClearArrows()" style="flex:1; justify-content:center; padding: 6px; color: var(--red2);" title="Borrar todo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg>
+              </button>
             </div>
           </div>
-          <div style="display: flex; gap: 5px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
-            <button class="sb-btn" onclick="undoLastDrawing()" style="flex:1; justify-content:center; padding: 6px; gap: 4px;" title="Deshacer trazo (dibujo)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg>
-              <span style="font-size:10px;">Trazo</span>
-            </button>
-            <button class="sb-btn" onclick="performGlobalUndo()" style="flex:1; justify-content:center; padding: 6px; gap: 4px;" title="Deshacer movimiento/táctica (Pizarra)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-              <span style="font-size:10px;">Pizarra</span>
-            </button>
-            <button class="sb-btn" onclick="clearArrows()" style="flex:1; justify-content:center; padding: 6px; color: var(--red2);" title="Borrar todo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg>
-            </button>
-        </div>
-      </div>
+        </details>
         
         <!-- SECCIÓN DE NORMAS DE CONVOCATORIA -->
-        <!-- SECCIÓN DE NORMAS DE CONVOCATORIA -->
-        <div class="sb-section" style="border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px;">
-          <details style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px;" open>
-            <summary style="font-size: 11px; font-weight: 700; color: var(--text2); cursor: pointer; outline: none; user-select: none; display: flex; align-items: center; gap: 4px;">
-              📋 Reglas de Plantilla
-            </summary>
-            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
-              <!-- Shared: Max squad -->
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
-                <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Convocados:</span>
-                <input type="number" id="rule-max-squad" min="1" max="99" value="23" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
-              </div>
-
-              <!-- Shared: Substitutions -->
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-top:2px;">
-                <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Cambios:</span>
-                <input type="number" id="rule-max-subs" min="0" max="99" value="5" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
-              </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
-                <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Ventanas:</span>
-                <input type="number" id="rule-max-sub-windows" min="0" max="99" value="3" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
-              </div>
-
-
+        <details class="sb-section" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+          <summary class="sb-label" style="margin:0; cursor:pointer; outline:none; user-select:none; display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">📋 Reglas de Plantilla <span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+            <!-- Shared: Max squad -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+              <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Convocados:</span>
+              <input type="number" id="rule-max-squad" min="1" max="99" value="23" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
             </div>
-          </details>
-        </div>
+
+            <!-- Shared: Substitutions -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-top:2px;">
+              <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Cambios:</span>
+              <input type="number" id="rule-max-subs" min="0" max="99" value="5" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+              <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Ventanas:</span>
+              <input type="number" id="rule-max-sub-windows" min="0" max="99" value="3" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
+            </div>
+          </div>
+        </details>
 
         <!-- SECCIÓN 4: ACCIONES -->
-        <div class="sb-section">
-          <div class="sb-label">Acciones y Exportar</div>
-          <div style="display: flex; flex-direction: column; gap: 5px;">
+        <details class="sb-section" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+          <summary class="sb-label" style="margin:0; cursor:pointer; outline:none; user-select:none; display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">⚙️ Acciones y Exportar <span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+          <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 12px;">
             <button class="sb-btn" onclick="openFormationModal()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
               Guardar pizarra actual
@@ -1692,7 +1762,7 @@ body.read-only-mode .write-control { display: none !important; }
               Exportar Pizarra
             </button>
           </div>
-        </div>
+        </details>
       </div>
       <div id="pizarra-main" style="position: relative;">
         <div id="team-header-display">
@@ -1717,19 +1787,17 @@ body.read-only-mode .write-control { display: none !important; }
           <button class="sb-btn" onclick="performGlobalUndo()" style="width:auto; justify-content:center; padding:8px 12px; font-size:12px; font-weight:600; gap:4px; margin:0;" title="Deshacer último movimiento">↩️ Deshacer</button>
         </div>
         <div id="mobile-drawing-toolbar" style="display:none; align-items:center; justify-content:space-between; background:var(--bg3); padding:8px 12px; border-bottom:1px solid var(--border); gap:6px; flex-shrink:0; overflow-x:auto;">
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap: nowrap; overflow-x: auto; width: calc(100% - 95px); scrollbar-width: none;">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap: nowrap; overflow-x: auto; width: calc(100% - 65px); scrollbar-width: none;">
             <button class="fmn-btn" id="m-tool-free" onclick="setTool('free')" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">✏️ Libre</button>
             <button class="fmn-btn" id="m-tool-arrow" onclick="setTool('arrow')" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">➡️ Flecha</button>
             <button class="fmn-btn" id="m-tool-curved_arrow" onclick="setTool('curved_arrow')" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">↩️ Curva</button>
             <button class="fmn-btn" id="m-tool-circle" onclick="setTool('circle')" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">⭕ Círculo</button>
             <button class="fmn-btn" id="m-tool-eraser" onclick="setTool('eraser')" style="color:var(--red2); flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">🧽 Goma</button>
-            <button class="fmn-btn" id="m-tool-fill" onclick="toggleMobileFill()" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">🎨 Rellenar: OFF</button>
-            <button class="fmn-btn" id="m-tool-weight" onclick="cycleBrushWeight()" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">📏 Grosor: Fino</button>
+            <button class="fmn-btn" id="m-tool-options" onclick="openDrawingOptionsModal()" style="flex-shrink: 0; white-space: nowrap; padding: 6px 10px;">⚙️ Opciones</button>
           </div>
           <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
-            <input type="color" id="m-drawing-color" value="#ffdc32" onchange="setDrawingColor(this.value)" style="width:28px; height:24px; padding:0; border:none; background:transparent; cursor:pointer;">
             <button class="sb-btn" onclick="undoLastDrawing()" style="padding:6px 8px; width:auto; margin:0;" title="Deshacer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg></button>
-            <button class="sb-btn" onclick="clearArrows()" style="padding:6px 8px; width:auto; margin:0; color:var(--red2);" title="Borrar todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg></button>
+            <button class="sb-btn" onclick="confirmClearArrows()" style="padding:6px 8px; width:auto; margin:0; color:var(--red2);" title="Borrar todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg></button>
           </div>
         </div>
         <div id="field-area" style="position: relative;">
@@ -1816,7 +1884,7 @@ body.read-only-mode .write-control { display: none !important; }
         </div>
         <div class="write-control" style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px; display:flex; justify-content:flex-end; gap:8px;">
           <span style="font-size:11px; color:var(--text3); font-weight:600; margin-right:auto; align-self:center;">Acciones rápidas:</span>
-          <button class="btn-icon" onclick="resetStats()" title="Resetear estadísticas de todos los jugadores a cero"><span style="color:var(--amber2);">🔄 Reset Stats</span></button>
+          <button class="btn-icon" onclick="resetStats()" title="Resetear estadísticas de todos los jugadores a cero"><span style="color:var(--amber2);">🔄 Reiniciar Estadísticas</span></button>
           <button class="btn-icon del" onclick="clearSquad()" title="Eliminar todos los jugadores de la plantilla"><span style="color:var(--red2);">🗑️ Vaciar Plantilla</span></button>
         </div>
       </details>
@@ -1868,7 +1936,7 @@ body.read-only-mode .write-control { display: none !important; }
               </div>
           </div>
       </div>
-      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;" open>
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
         <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📝 Informe Ejecutivo<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
         <div style="margin-top:12px; display:flex; flex-direction:column;">
           <div id="narrative-report" style="flex:1; color:var(--text2); background:rgba(31,111,235,0.02); padding:16px; border-radius:8px; border:1px solid var(--border); line-height:1.6; font-size:13px; margin-bottom:12px;"></div>
@@ -1878,14 +1946,14 @@ body.read-only-mode .write-control { display: none !important; }
 
       <!-- 2. INFORME GENERAL Y ALERTAS (Lado a lado) -->
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:16px; align-items:start; margin-bottom: 16px;">
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);" open>
+        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
           <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📋 Informe General<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
           <div style="margin-top:12px; display:flex; flex-direction:column;">
             <div id="analysis-report" style="flex:1; color:var(--text2); line-height:1.6; font-size:13px;"></div>
             <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('demographics')">🔍 Ampliar: Edad y Lateralidad</button>
           </div>
         </details>
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);" open>
+        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
           <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">⚠️ Alertas<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
           <div style="margin-top:12px; display:flex; flex-direction:column;">
             <div id="analysis-alerts" style="flex:1; display:flex; flex-direction:column; gap:8px; margin:0;"></div>
@@ -1894,39 +1962,44 @@ body.read-only-mode .write-control { display: none !important; }
       </div>
 
       <!-- 3. ONCE IDEAL POR RENDIMIENTO -->
-      <div class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
-        <div style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px;">✨ Once Ideal de la Temporada</div>
-        <div style="font-size:12px; color:var(--text3); margin-top:-6px;">Calcula y visualiza la alineación más eficiente de la temporada basada en el rendimiento de goles, asistencias y vallas invictas de toda tu plantilla.</div>
-        
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-          <select id="best-eleven-formation" style="padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:var(--bg3); color:var(--text); width:auto; height:36px; outline:none; cursor:pointer;" onchange="generateBestEleven()">
-            <option value="4-3-3">Alineación: 4-3-3</option>
-            <option value="4-4-2">Alineación: 4-4-2</option>
-            <option value="3-5-2">Alineación: 3-5-2</option>
-            <option value="4-2-3-1">Alineación: 4-2-3-1</option>
-          </select>
-          <button class="sb-btn" style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color:white; border:none; padding:8px 16px; font-weight:700; width:auto; box-shadow:0 4px 10px rgba(168,85,247,0.25);" onclick="generateBestEleven()">📊 Calcular Once Ideal</button>
-          <button id="btn-export-best-eleven" class="sb-btn" style="display: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:8px 16px; font-weight:700; width:auto; box-shadow:0 4px 10px rgba(16,185,129,0.25); align-items: center; gap: 6px;" onclick="exportBestElevenImage()">📸 Exportar Imagen</button>
-        </div>
+      <details id="best-eleven-card" class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">✨ Once Ideal de la Temporada<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:12px; color:var(--text3);">Calcula y visualiza la alineación más eficiente de la temporada basada en el rendimiento de goles, asistencias y vallas invictas de toda tu plantilla.</div>
+          
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <select id="best-eleven-formation" style="padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:var(--bg3); color:var(--text); width:auto; height:36px; outline:none; cursor:pointer;" onchange="generateBestEleven()">
+              <option value="4-3-3">Alineación: 4-3-3</option>
+              <option value="4-4-2">Alineación: 4-4-2</option>
+              <option value="3-5-2">Alineación: 3-5-2</option>
+              <option value="4-2-3-1">Alineación: 4-2-3-1</option>
+            </select>
+            <button id="btn-export-best-eleven" class="sb-btn" style="display: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:8px 16px; font-weight:700; width:auto; box-shadow:0 4px 10px rgba(16,185,129,0.25); align-items: center; gap: 6px;" onclick="exportBestElevenImage()">📸 Exportar Imagen</button>
+          </div>
 
-        <div id="best-eleven-pitch-container" style="display: none; margin-top: 10px; flex-direction: column; gap: 12px;">
-          <div class="mini-pitch" style="position: relative; width: 100%; max-width: 300px; height: 420px; margin: 0 auto; background: linear-gradient(180deg, #15803d 0%, #166534 100%); border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); overflow: hidden; box-shadow: inset 0 0 40px rgba(0,0,0,0.4);">
-            <!-- Field Lines -->
-            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.35);"></div>
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%;"></div>
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: rgba(255,255,255,0.35); border-radius: 50%;"></div>
-            <!-- Penalty areas -->
-            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 180px; height: 65px; border: 2px solid rgba(255,255,255,0.35); border-top: none;"></div>
-            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 25px; border: 2px solid rgba(255,255,255,0.35); border-top: none;"></div>
-            
-            <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 180px; height: 65px; border: 2px solid rgba(255,255,255,0.35); border-bottom: none;"></div>
-            <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 25px; border: 2px solid rgba(255,255,255,0.35); border-bottom: none;"></div>
-            
-            <!-- Players container -->
-            <div id="mini-pitch-players" style="position: absolute; inset: 0;"></div>
+          <div id="best-eleven-pitch-container" style="display: none; margin-top: 10px; flex-direction: column; gap: 12px;">
+            <div class="mini-pitch-wrapper" style="position: relative; width: 100%; max-width: 320px; aspect-ratio: 2/3; margin: 0 auto;">
+              <!-- Green field with overflow hidden -->
+              <div class="mini-pitch-field" style="position: absolute; inset: 0; background: linear-gradient(180deg, #15803d 0%, #166534 100%); border-radius: 12px; border: 2px solid rgba(255,255,255,0.4); overflow: hidden; box-shadow: inset 0 0 40px rgba(0,0,0,0.4);">
+                <!-- Field Lines -->
+                <div style="position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.35);"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 33%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: rgba(255,255,255,0.35); border-radius: 50%;"></div>
+                
+                <!-- Penalty areas -->
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 16%; border: 2px solid rgba(255,255,255,0.35); border-top: none;"></div>
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 26%; height: 6%; border: 2px solid rgba(255,255,255,0.35); border-top: none;"></div>
+                
+                <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 16%; border: 2px solid rgba(255,255,255,0.35); border-bottom: none;"></div>
+                <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 26%; height: 6%; border: 2px solid rgba(255,255,255,0.35); border-bottom: none;"></div>
+              </div>
+              
+              <!-- Players container -->
+              <div id="mini-pitch-players" style="position: absolute; inset: 0; pointer-events: none;"></div>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- 4. COMPARADOR DE JUGADORES -->
       <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
@@ -2032,13 +2105,9 @@ body.read-only-mode .write-control { display: none !important; }
             <!-- Detalles de la temporada histórica seleccionada -->
           </div>
         </div>
-      </details>e; user-select:none;">🗂️ Profundidad de Plantilla<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
-            <div id="analysis-depth"></div>
-          </div>
-        </details>
-      </div>
+      </details>
     </div>
+  </div>
 
   </div>
 </div>
@@ -2510,13 +2579,15 @@ body.read-only-mode .write-control { display: none !important; }
 
       <!-- Grupo 3: Atajos de Teclado -->
       <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <h4 style="margin: 0; font-size: 14px; color: var(--amber2); text-transform: uppercase; letter-spacing: 0.05em;">⌨️ Atajos y Controles</h4>
-          <label class="custom-checkbox-container">
-            <input type="checkbox" id="enable-hotkeys-checkbox" onchange="toggleHotkeys()" checked>
-            <span class="checkmark"></span>
-            Activar atajos
-          </label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--text3); font-weight: 700;">Activar atajos:</span>
+            <label class="main-toggle-switch">
+              <input type="checkbox" id="enable-hotkeys-checkbox" onchange="toggleHotkeys()" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; background: var(--bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
@@ -2572,7 +2643,7 @@ body.read-only-mode .write-control { display: none !important; }
       <div style="background: var(--bg2); border: 1px solid rgba(239,68,68,.25); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
         <h4 style="margin: 0; font-size: 14px; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em;">⚠️ Zona Peligrosa</h4>
         <span style="font-size: 11px; color: var(--text3);">Estas acciones no se pueden deshacer. Úsalas con precaución.</span>
-        <button class="sb-btn" onclick="if(confirm('¿Borrar TODOS los datos del equipo actual? Esta acción NO se puede deshacer.')) { if(confirm('¿Estás SEGURO? Perderás jugadores, partidos, historial y configuración de este equipo.')) { localStorage.removeItem('tacticboard_'+currentTeamId); location.reload(); } }" style="justify-content:center; padding: 10px; font-size: 13px; color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06);">
+        <button class="sb-btn" onclick="confirmDeleteTeam()" style="justify-content:center; padding: 10px; font-size: 13px; color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06);">
           🗑️ Borrar Datos del Equipo Actual
         </button>
       </div>
@@ -2856,6 +2927,55 @@ body.read-only-mode .write-control { display: none !important; }
   </div>
 </div>
 
+<!-- MODAL OPCIONES DE DIBUJO -->
+<div id="drawing-options-modal-overlay" onclick="if(event.target.id==='drawing-options-modal-overlay') closeDrawingOptionsModal()">
+  <div class="modal" style="width: 320px; padding: 24px;">
+    <h3 style="margin-bottom: 20px; font-size: 16px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-weight:700;">🎨 Opciones de Dibujo</h3>
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      
+      <!-- Color picker -->
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:13px; color:var(--text2); font-weight:600;">Color del trazo:</span>
+        <input type="color" id="drawing-color-picker" value="#ffdc32" onchange="setDrawingColor(this.value)" style="width:40px; height:30px; padding:0; border:1px solid var(--border); background:transparent; cursor:pointer; border-radius:4px;">
+      </div>
+      
+      <!-- Fill shapes -->
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:13px; color:var(--text2); font-weight:600;">Rellenar figuras:</span>
+        <label style="position: relative; display: inline-block; width: 34px; height: 20px; cursor: pointer;">
+          <input type="checkbox" id="drawing-fill-checkbox" onchange="setFillShapes(this.checked)" style="display:none;">
+          <span id="drawing-fill-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .2s; border-radius: 20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);"></span>
+          <span id="drawing-fill-knob" style="position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background-color: white; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transform: translateX(0px);"></span>
+        </label>
+      </div>
+      
+      <!-- Thickness -->
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <span style="font-size:13px; color:var(--text2); font-weight:600;">Grosor del pincel:</span>
+        <div class="brush-size-group" style="display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--bg3); height:32px;">
+          <button id="btn-brush-1" class="brush-size-btn active" onclick="setBrushWeight(2.0)" style="flex:1; background:transparent; border:none; color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Fino (Tecla 1)">1</button>
+          <button id="btn-brush-2" class="brush-size-btn" onclick="setBrushWeight(3.2)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Medio (Tecla 2)">2</button>
+          <button id="btn-brush-3" class="brush-size-btn" onclick="setBrushWeight(5.0)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Grueso (Tecla 3)">3</button>
+          <button id="btn-brush-4" class="brush-size-btn" onclick="setBrushWeight(8.0)" style="flex:1; background:transparent; border:none; border-left:1px solid var(--border); color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" title="Relleno (Tecla 4)">4</button>
+        </div>
+      </div>
+
+      <!-- Auto-detect shapes -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top: 4px;">
+        <span style="font-size:13px; color:var(--text2); font-weight:600;">Autodetectar formas:</span>
+        <label class="main-toggle-switch">
+          <input type="checkbox" id="drawing-autodetect-checkbox" onchange="setAutoDetectShapes(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+    </div>
+    <div class="modal-actions" style="margin-top: 24px;">
+      <button class="btn-cancel" onclick="closeDrawingOptionsModal()" style="width:100%; justify-content:center;">Aceptar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MENU PRINCIPAL -->
 <div id="main-menu-overlay">
   <div style="position: absolute; top: 16px; right: 24px; display: flex; gap: 8px; z-index: 10;">
@@ -3076,6 +3196,125 @@ body.read-only-mode .write-control { display: none !important; }
  */
 
 // ==================== UTILS ====================
+// --- Custom Toast Notification ---
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast-notification`;
+  
+  let icon = 'ℹ️';
+  if (type === 'success' || /éxito|exito|correcto|guardado|restaurado|importado|creado/i.test(message)) {
+    toast.classList.add('success');
+    icon = '✅';
+  } else if (type === 'error' || /error|fallo|limite|límite/i.test(message)) {
+    toast.classList.add('error');
+    icon = '⚠️';
+  } else if (type === 'warning' || /atención|cuidado|advertencia|seguro/i.test(message)) {
+    toast.classList.add('warning');
+    icon = '🔔';
+  }
+  
+  let cleanMsg = message;
+  const emojiPrefixes = ['✔️', '✅', '❌', '⚠️', 'ℹ️', '🔔', '📢', '🧤', '⚽', '⚙️', '⚖️', '📋', '📝', '💾', '🗑️', '🔍', '🔄', '❓'];
+  for (const emoji of emojiPrefixes) {
+    if (cleanMsg.startsWith(emoji)) {
+      icon = emoji;
+      cleanMsg = cleanMsg.slice(emoji.length).trim();
+      break;
+    }
+  }
+  
+  toast.innerHTML = `<span style="font-size:15px; flex-shrink:0;">${icon}</span><span style="flex:1; line-height:1.3;">${cleanMsg}</span>`;
+  
+  const dismiss = () => {
+    toast.style.animation = 'toastOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 250);
+  };
+  
+  toast.onclick = dismiss;
+  container.appendChild(toast);
+  
+  setTimeout(dismiss, 3500);
+}
+
+// Override global window.alert
+window.alert = function(msg) {
+  showToast(msg);
+};
+
+// --- Custom Confirmation Modal ---
+function showCustomConfirm(message, title = 'Confirmar acción') {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'custom-confirm-overlay';
+    
+    const isDanger = /eliminar|borrar|resetear|restaurar|limpiar|atención|irreversible|seguro/i.test(message);
+    const confirmBtnBg = isDanger 
+      ? 'linear-gradient(135deg, var(--red) 0%, var(--red2) 100%)' 
+      : 'linear-gradient(135deg, var(--blue) 0%, #1d4ed8 100%)';
+    const confirmBtnBorder = isDanger
+      ? '1px solid var(--red2)'
+      : '1px solid #1d4ed8';
+    const confirmBtnShadow = isDanger
+      ? '0 4px 10px rgba(239,68,68,0.2)'
+      : '0 4px 10px rgba(37,99,235,0.2)';
+      
+    overlay.innerHTML = `
+      <div class="confirm-box">
+        <div style="font-size: 15px; font-weight: 800; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">${isDanger ? '⚠️' : '❓'}</span>
+          <span>${title}</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text2); line-height: 1.45; white-space: pre-line;">${message}</div>
+        <div style="display: flex; gap: 10px; margin-top: 6px; justify-content: flex-end;">
+          <button id="confirm-btn-cancel" class="sb-btn" style="width: auto; padding: 7px 14px; background: var(--bg3); border-color: var(--border); font-weight: 700; margin: 0; font-size: 12px;">Cancelar</button>
+          <button id="confirm-btn-ok" class="sb-btn" style="width: auto; padding: 7px 14px; background: ${confirmBtnBg}; border: ${confirmBtnBorder}; color: white; font-weight: 700; margin: 0; box-shadow: ${confirmBtnShadow}; font-size: 12px;">Confirmar</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    const cleanUp = (val) => {
+      overlay.style.animation = 'fadeOut 0.2s forwards';
+      setTimeout(() => {
+        overlay.remove();
+        resolve(val);
+      }, 200);
+    };
+    
+    overlay.querySelector('#confirm-btn-cancel').onclick = () => cleanUp(false);
+    overlay.querySelector('#confirm-btn-ok').onclick = () => cleanUp(true);
+    
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        cleanUp(false);
+      }
+    };
+  });
+}
+
+function confirmDeleteTeam() {
+  showCustomConfirm('¿Borrar TODOS los datos del equipo actual? Esta acción NO se puede deshacer.', 'Borrar datos del equipo').then(ok1 => {
+    if (!ok1) return;
+    showCustomConfirm('¿Estás SEGURO? Perderás jugadores, partidos, historial y configuración de este equipo.', 'Confirmar acción irreversible').then(ok2 => {
+      if (ok2) {
+        try {
+          localStorage.removeItem('tacticboard_' + currentTeamId);
+        } catch (e) {}
+        location.reload();
+      }
+    });
+  });
+}
+
 function generateUUID() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -3110,6 +3349,7 @@ let chronicleTheme = 'dark';
 let currentChronicleMatchId = null;
 let tacticalZonesColors = {};
 let fillShapesEnabled = false;
+let autoDetectShapes = false;
 let competitionRules = '';
 let lastBestEleven = null;
 let lastBestElevenFormation = '';
@@ -3944,24 +4184,26 @@ function duplicateTeam(teamId) {
 }
 
 function deleteTeam(teamId) {
-  if (!confirm('¿Estás seguro de que quieres eliminar este equipo y todos sus datos? Esta acción no se puede deshacer.')) return;
-  appData.teams = appData.teams.filter(t => t.id !== teamId);
-  setLocalStorage('tacticaProAppData_v2', JSON.stringify(appData));
-  
-  // Si eliminamos el equipo activo, vaciar activeTeamId y seleccionar otro si queda alguno
-  if (activeTeamId === teamId) {
-    if (appData.teams.length > 0) {
-      selectTeam(appData.teams[0].id);
+  showCustomConfirm('¿Estás seguro de que quieres eliminar este equipo y todos sus datos? Esta acción no se puede deshacer.', 'Eliminar equipo').then(ok => {
+    if (!ok) return;
+    appData.teams = appData.teams.filter(t => t.id !== teamId);
+    setLocalStorage('tacticaProAppData_v2', JSON.stringify(appData));
+    
+    // Si eliminamos el equipo activo, vaciar activeTeamId y seleccionar otro si queda alguno
+    if (activeTeamId === teamId) {
+      if (appData.teams.length > 0) {
+        selectTeam(appData.teams[0].id);
+      } else {
+        activeTeamId = null;
+        try {
+          localStorage.removeItem('tacticaProActiveTeamId');
+        } catch (e) {}
+        showMainMenu();
+      }
     } else {
-      activeTeamId = null;
-      try {
-        localStorage.removeItem('tacticaProActiveTeamId');
-      } catch (e) {}
-      showMainMenu();
+      renderMainMenu();
     }
-  } else {
-    renderMainMenu();
-  }
+  });
 }
 
 function selectTeam(teamId) {
@@ -5632,7 +5874,10 @@ canvas.addEventListener('mouseup', e => {
     }
     if (drawingTool === 'free') {
       if (freePath.length > 2) {
-        const recognized = recognizeShape(freePath);
+        let recognized = null;
+        if (autoDetectShapes) {
+          recognized = recognizeShape(freePath);
+        }
         if (recognized) {
           arrows.push({
             type: recognized.type,
@@ -6080,6 +6325,15 @@ function clearArrows() {
     saveData();
     render(); 
   }
+}
+
+function confirmClearArrows() {
+  if (arrows.length === 0 && (typeof tacticalZonesColors !== 'object' || Object.keys(tacticalZonesColors).length === 0)) return;
+  showCustomConfirm('¿Quieres limpiar todos los dibujos del campo?', 'Limpiar pizarra').then(ok => {
+    if (ok) {
+      clearArrows();
+    }
+  });
 }
 
 function simplifyPath(points, epsilon) {
@@ -8736,23 +8990,27 @@ function toggleConvocado(id, isChecked) {
 }
 
 function deletePlayer(id) {
-  if (!confirm('¿Eliminar este jugador?')) return;
-  saveUndoState();
-  players = players.filter(p => p.id !== id);
-  initFieldPlayers();
-  saveData();
-  renderSquadTable();
-  render();
+  showCustomConfirm('¿Eliminar este jugador?', 'Eliminar jugador').then(ok => {
+    if (!ok) return;
+    saveUndoState();
+    players = players.filter(p => p.id !== id);
+    initFieldPlayers();
+    saveData();
+    renderSquadTable();
+    render();
+  });
 }
 
 function clearSquad() {
-  if (!confirm('¿Estás seguro de que quieres eliminar a todos los jugadores de la plantilla de este equipo?')) return;
-  saveUndoState();
-  players = [];
-  initFieldPlayers();
-  saveData();
-  renderSquadTable();
-  render();
+  showCustomConfirm('¿Estás seguro de que quieres eliminar a todos los jugadores de la plantilla de este equipo?', 'Eliminar plantilla').then(ok => {
+    if (!ok) return;
+    saveUndoState();
+    players = [];
+    initFieldPlayers();
+    saveData();
+    renderSquadTable();
+    render();
+  });
 }
 
 function resetStats() {
@@ -8761,20 +9019,22 @@ function resetStats() {
     return;
   }
   
-  if (!confirm('¿Estás seguro de que quieres poner a cero TODAS las estadísticas (goles, asistencias, tarjetas, partidos...) de la plantilla actual?\n\nEsta acción no se puede deshacer (aunque puedes usar Ctrl+Z si te equivocas al instante).')) return;
-  
-  saveUndoState();
-  
-  players.forEach(p => {
-    p.goals = 0; p.assists = 0; p.conceded = 0; p.cleanSheets = 0;
-    p.yellow = 0; p.red = 0; p.matches = 0; p.starts = 0; p.subs = 0;
-    p.isSuspended = false;
+  showCustomConfirm('¿Estás seguro de que quieres poner a cero TODAS las estadísticas (goles, asistencias, tarjetas, partidos...) de la plantilla actual?\n\nEsta acción no se puede deshacer.', 'Reiniciar estadísticas').then(ok => {
+    if (!ok) return;
+    
+    saveUndoState();
+    
+    players.forEach(p => {
+      p.goals = 0; p.assists = 0; p.conceded = 0; p.cleanSheets = 0;
+      p.yellow = 0; p.red = 0; p.matches = 0; p.starts = 0; p.subs = 0;
+      p.isSuspended = false;
+    });
+    
+    saveData();
+    renderSquadTable();
+    render();
+    alert('✅ Las estadísticas de la plantilla han sido reseteadas a cero correctamente.');
   });
-  
-  saveData();
-  renderSquadTable();
-  render();
-  alert('✅ Las estadísticas de la plantilla han sido reseteadas a cero correctamente.');
 }
 
 function startNewSeason() {
@@ -8791,6 +9051,9 @@ function startNewSeason() {
 
 function closeSeasonModal() { document.getElementById('season-modal-overlay').classList.remove('open'); }
 function closeSeasonModalOutside(e) { if (e.target.id === 'season-modal-overlay') closeSeasonModal(); }
+
+function openDrawingOptionsModal() { document.getElementById('drawing-options-modal-overlay')?.classList.add('open'); }
+function closeDrawingOptionsModal() { document.getElementById('drawing-options-modal-overlay')?.classList.remove('open'); }
 
 // ==================== REGISTRAR PARTIDO ====================
 function openMatchLogModal() {
@@ -10440,6 +10703,101 @@ function updateAnalysis() {
   let alerts = [];
   let report = "";
 
+  // --- Calcular Ajuste Táctico (Tactical Fit) ---
+  const req = { gk: 1, dfc: 2, lat: 2, mid: 3, fwd: 3 }; // por defecto 4-3-3
+  if (currentFormation === '4-4-2') { req.dfc = 2; req.lat = 2; req.mid = 4; req.fwd = 2; }
+  else if (currentFormation === '4-2-3-1') { req.dfc = 2; req.lat = 2; req.mid = 5; req.fwd = 1; }
+  else if (currentFormation === '3-5-2') { req.dfc = 3; req.lat = 2; req.mid = 3; req.fwd = 2; }
+  else if (currentFormation === '5-3-2') { req.dfc = 3; req.lat = 2; req.mid = 3; req.fwd = 2; }
+  else if (currentFormation === '4-1-4-1') { req.dfc = 2; req.lat = 2; req.mid = 5; req.fwd = 1; }
+
+  const pors = activePlayers.filter(p => p.pos === 'POR');
+  const dfcs = activePlayers.filter(p => p.pos === 'DFC');
+  const lats = activePlayers.filter(p => ['LTI','LTD','CAI','CAD'].includes(p.pos));
+  const mids = activePlayers.filter(p => ['MCD','MED','MCO','MD','MI'].includes(p.pos));
+  const fwds = activePlayers.filter(p => ['EXTI','EXTD','DEL'].includes(p.pos));
+
+  const getCoverage = (naturalCount, requiredCount, altFilter) => {
+    if (requiredCount === 0) return 1;
+    let count = naturalCount;
+    if (count < requiredCount) {
+      const altCount = activePlayers.filter(p => altFilter(p) && p.pos !== 'POR').length;
+      count += altCount;
+    }
+    return Math.min(1, count / requiredCount);
+  };
+
+  const covGk = pors.length >= 1 ? 1 : 0;
+  const covDfc = getCoverage(dfcs.length, req.dfc, p => p.altPos && p.altPos.includes('DFC'));
+  const covLat = getCoverage(lats.length, req.lat, p => p.altPos && p.altPos.some(pos => ['LTI','LTD','CAI','CAD'].includes(pos)));
+  const covMid = getCoverage(mids.length, req.mid, p => p.altPos && p.altPos.some(pos => ['MCD','MED','MCO','MD','MI'].includes(pos)));
+  const covFwd = getCoverage(fwds.length, req.fwd, p => p.altPos && p.altPos.some(pos => ['EXTI','EXTD','DEL'].includes(pos)));
+
+  const tacticalFit = Math.round(((covGk + covDfc + covLat + covMid + covFwd) / 5) * 100);
+  
+  let fitLabel = 'Malo';
+  let fitColor = 'var(--red2)';
+  if (tacticalFit >= 90) { fitLabel = 'Excelente'; fitColor = 'var(--green3)'; }
+  else if (tacticalFit >= 70) { fitLabel = 'Bueno'; fitColor = 'var(--blue2)'; }
+  else if (tacticalFit >= 50) { fitLabel = 'Regular'; fitColor = 'var(--amber2)'; }
+
+  let fitRecommendation = 'La plantilla cubre el esquema táctico.';
+  if (covGk === 0) {
+    fitRecommendation = '⚠️ Sin porteros activos. Debes convocar un guardameta.';
+  } else if (covDfc < 1 && covDfc <= covFwd && covDfc <= covMid) {
+    fitRecommendation = '💡 Pocos centrales. Prueba un esquema de 4 defensas en vez de 3 o 5.';
+  } else if (covFwd < 1 && covFwd <= covDfc && covFwd <= covMid) {
+    fitRecommendation = '💡 Escasez de atacantes. Considera un esquema de 1 delantero (4-2-3-1).';
+  } else if (covMid < 1 && covMid <= covDfc && covMid <= covFwd) {
+    fitRecommendation = '💡 Pocos medios. Prueba un sistema con menos volantes.';
+  } else if (covLat < 1) {
+    fitRecommendation = '💡 Faltan laterales naturales o alternativos.';
+  }
+
+  // --- Calcular Solidez Defensiva (Defensive Solidity) ---
+  let defSolidity = 100;
+  let defLabel = 'Imbatible';
+  let defColor = 'var(--green3)';
+  let defRecommendation = 'La retaguardia transmite seguridad absoluta.';
+
+  const gkMatches = players.filter(p => p.pos === 'POR').reduce((max, p) => Math.max(max, p.matches||0), 0);
+  const totalCleanSheets = players.filter(p => p.pos === 'POR').reduce((s, p) => s + (p.cleanSheets || 0), 0);
+  const totalConceded = players.filter(p => p.pos === 'POR').reduce((s, p) => s + (p.conceded || 0), 0);
+
+  if (gkMatches > 0) {
+    const goalsPerMatch = totalConceded / gkMatches;
+    const cleanSheetPct = totalCleanSheets / gkMatches;
+    let goalsScore = 100;
+    if (goalsPerMatch > 0) {
+      goalsScore = Math.max(10, 100 - (goalsPerMatch * 30));
+    }
+    const csScore = cleanSheetPct * 100;
+    defSolidity = Math.round((goalsScore + csScore) / 2);
+    
+    if (defSolidity >= 85) {
+      defLabel = 'Excelente';
+      defColor = 'var(--green3)';
+      defRecommendation = `Promedio de ${goalsPerMatch.toFixed(2)} goles encajados. Defensa muy sólida.`;
+    } else if (defSolidity >= 65) {
+      defLabel = 'Aceptable';
+      defColor = 'var(--blue2)';
+      defRecommendation = `Promedio de ${goalsPerMatch.toFixed(2)} goles encajados. Defensiva regular.`;
+    } else if (defSolidity >= 45) {
+      defLabel = 'Vulnerable';
+      defColor = 'var(--amber2)';
+      defRecommendation = `Se encajan ${goalsPerMatch.toFixed(2)} goles/partido. Urge retrasar líneas de presión.`;
+    } else {
+      defLabel = 'Crítico';
+      defColor = 'var(--red2)';
+      defRecommendation = `Defensa muy batida (${goalsPerMatch.toFixed(2)} goles/partido). Agrega un pivote defensivo.`;
+    }
+  } else {
+    defSolidity = 0;
+    defLabel = 'Sin partidos';
+    defColor = 'var(--text3)';
+    defRecommendation = 'Registra partidos para empezar a calcular la solidez defensiva.';
+  }
+
   if (players.length === 0) {
     reportEl.innerHTML = "No hay datos suficientes para generar un informe. Añade jugadores a la plantilla.";
     alertsEl.innerHTML = "<div style='color:var(--text3);font-size:12px;'>Sin jugadores.</div>";
@@ -10454,24 +10812,7 @@ function updateAnalysis() {
   if (narrativeEl) narrativeEl.innerHTML = generateNarrativeReportText('html');
 
   // Alertas
-  // Lógica dinámica por formación
-  const req = { gk: 1, dfc: 2, lat: 2, mid: 3, fwd: 3 }; // por defecto 4-3-3
-  if (currentFormation === '4-4-2') { req.dfc = 2; req.lat = 2; req.mid = 4; req.fwd = 2; }
-  else if (currentFormation === '4-2-3-1') { req.dfc = 2; req.lat = 2; req.mid = 5; req.fwd = 1; }
-  else if (currentFormation === '3-5-2') { req.dfc = 3; req.lat = 2; req.mid = 3; req.fwd = 2; }
-  else if (currentFormation === '5-3-2') { req.dfc = 3; req.lat = 2; req.mid = 3; req.fwd = 2; }
-  else if (currentFormation === '4-1-4-1') { req.dfc = 2; req.lat = 2; req.mid = 5; req.fwd = 1; }
-
-  // Contar activos por su posición primaria
-  const pors = activePlayers.filter(p => p.pos === 'POR');
-  const dfcs = activePlayers.filter(p => p.pos === 'DFC');
-  const lats = activePlayers.filter(p => ['LTI','LTD','CAI','CAD'].includes(p.pos));
-  const mids = activePlayers.filter(p => ['MCD','MED','MCO','MD','MI'].includes(p.pos));
-  const fwds = activePlayers.filter(p => ['EXTI','EXTD','DEL'].includes(p.pos));
-
   const teamMatches = Math.max(...players.map(p => p.matches || 0), 0);
-  const totalConceded = players.filter(p => p.pos === 'POR').reduce((s, p) => s + (p.conceded || 0), 0);
-  const totalCleanSheets = players.filter(p => p.pos === 'POR').reduce((s, p) => s + (p.cleanSheets || 0), 0);
   const totalYellow = players.reduce((s, p) => s + (p.yellow || 0), 0);
   const totalRed = players.reduce((s, p) => s + (p.red || 0), 0);
   const totalValue = players.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0);
@@ -10636,9 +10977,35 @@ function updateAnalysis() {
                <strong style="color:var(--blue2);">🛡️ Defensiva:</strong> ${totalConceded} Encajados | ${totalCleanSheets} Port. a 0
              </div>`;
 
-  report += `<div style="margin-bottom:8px;">
+  report += `<div style="margin-bottom:12px;">
                <strong style="color:var(--amber2);">🟨 Disciplina:</strong> ${totalYellow} Amarillas | <span style="color:var(--red2);">${totalRed} Rojas</span>
              </div>`;
+             
+  // Progress Bar 1: Tactical Fit
+  report += `
+  <div style="margin-bottom:12px; border-top:1px solid var(--border); padding-top:10px;">
+    <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:4px; align-items:center;">
+      <span style="font-weight:700;">🎯 Ajuste Táctico:</span>
+      <span style="font-weight:800; color:${fitColor}; font-size:11.5px;">${tacticalFit}% (${fitLabel})</span>
+    </div>
+    <div style="width:100%; height:5px; background:var(--bg3); border-radius:2.5px; overflow:hidden; border:1px solid var(--border);">
+      <div style="width:${tacticalFit}%; height:100%; background:${fitColor}; border-radius:2.5px;"></div>
+    </div>
+    <div style="font-size:10.5px; color:var(--text3); margin-top:3px; line-height:1.2;">${fitRecommendation}</div>
+  </div>`;
+
+  // Progress Bar 2: Defensive Solidity
+  report += `
+  <div style="margin-bottom:12px;">
+    <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:4px; align-items:center;">
+      <span style="font-weight:700;">🛡️ Solidez Defensiva:</span>
+      <span style="font-weight:800; color:${defColor}; font-size:11.5px;">${defSolidity}% (${defLabel})</span>
+    </div>
+    <div style="width:100%; height:5px; background:var(--bg3); border-radius:2.5px; overflow:hidden; border:1px solid var(--border);">
+      <div style="width:${defSolidity}%; height:100%; background:${defColor}; border-radius:2.5px;"></div>
+    </div>
+    <div style="font-size:10.5px; color:var(--text3); margin-top:3px; line-height:1.2;">${defRecommendation}</div>
+  </div>`;
              
   const avgAge = (players.reduce((s, p) => s + (p.age || 22), 0) / players.length).toFixed(1);
   report += `<div style="border-top:1px solid var(--border); padding-top:8px; margin-top:4px;">
@@ -13864,10 +14231,18 @@ function closeMainMenu() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function initAppDOM() {
   const mainMenuOverlay = document.getElementById('main-menu-overlay');
   if (mainMenuOverlay) {
     mainMenuOverlay.addEventListener('click', (event) => { if(event.target.id === 'main-menu-overlay') closeMainMenu(); });
+  }
+  const bestElevenCard = document.getElementById('best-eleven-card');
+  if (bestElevenCard) {
+    bestElevenCard.addEventListener('toggle', function() {
+      if (this.open) {
+        generateBestEleven();
+      }
+    });
   }
   if (typeof drawingWeight !== 'undefined') {
     setBrushWeight(drawingWeight);
@@ -13875,7 +14250,15 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof updateStorageQuota === 'function') {
     updateStorageQuota();
   }
-});
+  const autodetectChk = document.getElementById('drawing-autodetect-checkbox');
+  if (autodetectChk) autodetectChk.checked = autoDetectShapes;
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAppDOM);
+} else {
+  initAppDOM();
+}
 
 function openMatchHubModal() {
   const area = document.getElementById('competition-rules-textarea');
@@ -14132,6 +14515,13 @@ try {
   showTacticalGrid = localStorage.getItem('tacticaProShowGrid') === 'true';
 } catch (e) {}
 
+try {
+  const savedAutoDetect = localStorage.getItem('tacticaProAutoDetectShapes');
+  if (savedAutoDetect !== null) {
+    autoDetectShapes = savedAutoDetect === 'true';
+  }
+} catch (e) {}
+
 
 try {
   gkColor = localStorage.getItem('tacticaProGkColor') || '#eab308';
@@ -14265,9 +14655,11 @@ window.addEventListener('keydown', function(e) {
       break;
     case 'C':
       e.preventDefault();
-      if (confirm('¿Quieres limpiar todos los dibujos del campo?')) {
-        clearArrows();
-      }
+      showCustomConfirm('¿Quieres limpiar todos los dibujos del campo?', 'Limpiar pizarra').then(ok => {
+        if (ok) {
+          clearArrows();
+        }
+      });
       break;
         case '1':
           e.preventDefault();
@@ -14336,6 +14728,8 @@ function generateBestEleven() {
     return;
   }
 
+  const selectedFmn = document.getElementById('best-eleven-formation')?.value || '4-3-3';
+
   const getPlayerScore = p => {
     const matches = p.matches || 0;
     if (p.pos === 'POR') {
@@ -14349,21 +14743,20 @@ function generateBestEleven() {
 
   const sortedPlayers = [...activePlayers].sort((a, b) => getPlayerScore(b) - getPlayerScore(a));
 
-  const selectedFmn = document.getElementById('best-eleven-formation')?.value || '4-3-3';
   const formationConfigs = {
     '4-3-3': {
       coords: [
-        { left: '50%', bottom: '6%', label: 'POR' },
-        { left: '15%', bottom: '23%', label: 'LTI' },
-        { left: '38%', bottom: '19%', label: 'DFC' },
-        { left: '62%', bottom: '19%', label: 'DFC' },
-        { left: '85%', bottom: '23%', label: 'LTD' },
-        { left: '22%', bottom: '46%', label: 'MED' },
-        { left: '50%', bottom: '40%', label: 'MED' },
-        { left: '78%', bottom: '46%', label: 'MED' },
-        { left: '18%', bottom: '74%', label: 'EI' },
-        { left: '50%', bottom: '82%', label: 'DC' },
-        { left: '82%', bottom: '74%', label: 'ED' }
+        { left: '50%', bottom: '10%', label: 'POR' },
+        { left: '15%', bottom: '22%', label: 'LTI' },
+        { left: '35%', bottom: '20%', label: 'DFC' },
+        { left: '65%', bottom: '20%', label: 'DFC' },
+        { left: '85%', bottom: '22%', label: 'LTD' },
+        { left: '30%', bottom: '50%', label: 'MED' },
+        { left: '50%', bottom: '38%', label: 'MED' },
+        { left: '70%', bottom: '50%', label: 'MED' },
+        { left: '18%', bottom: '78%', label: 'EI' },
+        { left: '50%', bottom: '90%', label: 'DC' },
+        { left: '82%', bottom: '78%', label: 'ED' }
       ],
       filters: [
         p => p.pos === 'POR',
@@ -14399,17 +14792,17 @@ function generateBestEleven() {
     },
     '4-4-2': {
       coords: [
-        { left: '50%', bottom: '6%', label: 'POR' },
-        { left: '15%', bottom: '23%', label: 'LTI' },
-        { left: '38%', bottom: '19%', label: 'DFC' },
-        { left: '62%', bottom: '19%', label: 'DFC' },
-        { left: '85%', bottom: '23%', label: 'LTD' },
-        { left: '18%', bottom: '48%', label: 'MI' },
-        { left: '38%', bottom: '43%', label: 'MED' },
-        { left: '62%', bottom: '43%', label: 'MED' },
-        { left: '82%', bottom: '48%', label: 'MD' },
-        { left: '38%', bottom: '80%', label: 'DC' },
-        { left: '62%', bottom: '80%', label: 'DC' }
+        { left: '50%', bottom: '10%', label: 'POR' },
+        { left: '15%', bottom: '22%', label: 'LTI' },
+        { left: '35%', bottom: '20%', label: 'DFC' },
+        { left: '65%', bottom: '20%', label: 'DFC' },
+        { left: '85%', bottom: '22%', label: 'LTD' },
+        { left: '15%', bottom: '52%', label: 'MI' },
+        { left: '35%', bottom: '48%', label: 'MED' },
+        { left: '65%', bottom: '48%', label: 'MED' },
+        { left: '85%', bottom: '52%', label: 'MD' },
+        { left: '35%', bottom: '90%', label: 'DC' },
+        { left: '65%', bottom: '90%', label: 'DC' }
       ],
       filters: [
         p => p.pos === 'POR',
@@ -14445,17 +14838,17 @@ function generateBestEleven() {
     },
     '3-5-2': {
       coords: [
-        { left: '50%', bottom: '6%', label: 'POR' },
-        { left: '25%', bottom: '19%', label: 'DFC' },
-        { left: '50%', bottom: '19%', label: 'DFC' },
-        { left: '75%', bottom: '19%', label: 'DFC' },
-        { left: '15%', bottom: '43%', label: 'CAI' },
-        { left: '50%', bottom: '35%', label: 'MCD' },
-        { left: '35%', bottom: '52%', label: 'MED' },
-        { left: '65%', bottom: '52%', label: 'MED' },
-        { left: '85%', bottom: '43%', label: 'CAD' },
-        { left: '38%', bottom: '80%', label: 'DC' },
-        { left: '62%', bottom: '80%', label: 'DC' }
+        { left: '50%', bottom: '10%', label: 'POR' },
+        { left: '25%', bottom: '20%', label: 'DFC' },
+        { left: '50%', bottom: '20%', label: 'DFC' },
+        { left: '75%', bottom: '20%', label: 'DFC' },
+        { left: '15%', bottom: '52%', label: 'CAI' },
+        { left: '35%', bottom: '48%', label: 'MCD' },
+        { left: '50%', bottom: '38%', label: 'MED' },
+        { left: '65%', bottom: '48%', label: 'MED' },
+        { left: '85%', bottom: '52%', label: 'CAD' },
+        { left: '35%', bottom: '90%', label: 'DC' },
+        { left: '65%', bottom: '90%', label: 'DC' }
       ],
       filters: [
         p => p.pos === 'POR',
@@ -14491,17 +14884,17 @@ function generateBestEleven() {
     },
     '4-2-3-1': {
       coords: [
-        { left: '50%', bottom: '6%', label: 'POR' },
-        { left: '15%', bottom: '23%', label: 'LTI' },
-        { left: '38%', bottom: '19%', label: 'DFC' },
-        { left: '62%', bottom: '19%', label: 'DFC' },
-        { left: '85%', bottom: '23%', label: 'LTD' },
-        { left: '35%', bottom: '40%', label: 'MCD' },
-        { left: '65%', bottom: '40%', label: 'MCD' },
-        { left: '50%', bottom: '58%', label: 'MCO' },
-        { left: '18%', bottom: '62%', label: 'MI' },
-        { left: '50%', bottom: '82%', label: 'DC' },
-        { left: '82%', bottom: '62%', label: 'MD' }
+        { left: '50%', bottom: '10%', label: 'POR' },
+        { left: '15%', bottom: '22%', label: 'LTI' },
+        { left: '35%', bottom: '20%', label: 'DFC' },
+        { left: '65%', bottom: '20%', label: 'DFC' },
+        { left: '85%', bottom: '22%', label: 'LTD' },
+        { left: '35%', bottom: '38%', label: 'MCD' },
+        { left: '65%', bottom: '38%', label: 'MCD' },
+        { left: '50%', bottom: '78%', label: 'MCO' },
+        { left: '15%', bottom: '78%', label: 'MI' },
+        { left: '50%', bottom: '90%', label: 'DC' },
+        { left: '85%', bottom: '78%', label: 'MD' }
       ],
       filters: [
         p => p.pos === 'POR',
@@ -14614,25 +15007,23 @@ function generateBestEleven() {
       position: absolute;
       left: ${coords.left};
       bottom: ${coords.bottom};
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      text-align: center;
+      width: 0;
+      height: 0;
       z-index: 10;
-      animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation: playerFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
       animation-delay: ${slot * 30}ms;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     `;
 
     playerEl.innerHTML = `
-      <div class="mini-jersey" style="width: 28px; height: 28px; border-radius: 50%; background: ${jerseyColor}; color: ${textColor}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); position: relative;">
+      <div class="mini-jersey" style="position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; background: ${jerseyColor}; color: ${textColor}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
         ${p.num}
         <span style="position: absolute; top: -6px; right: -8px; background: rgba(0,0,0,0.7); color: white; font-size: 7px; padding: 1px 3px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); font-weight: 700;">${coords.label}</span>
       </div>
-      <div style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); white-space: nowrap; pointer-events: none;">
-        <div style="font-size: 9px; color: white; font-weight: 700;">${escapeHTML(p.name)}</div>
-        <div style="font-size: 8px; color: rgba(255,255,255,0.7); font-weight: 500; margin-top: 1px;">${statsInfo}</div>
+      <div style="position: absolute; left: 0; top: 16px; transform: translateX(-50%); background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(255,255,255,0.15); padding: 3.5px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); white-space: nowrap; pointer-events: none; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="font-size: 9px; color: white; font-weight: 700; line-height: 1.2;">${escapeHTML(p.name)}</div>
+        <div style="font-size: 8px; color: rgba(255,255,255,0.7); font-weight: 500; margin-top: 1px; line-height: 1.1;">${statsInfo}</div>
       </div>
     `;
     container.appendChild(playerEl);
@@ -14823,56 +15214,56 @@ function exportBestElevenImage() {
   // Coords mapping
   const coordsMap = {
     '4-3-3': [
-      { left: '50%', bottom: '6%', label: 'POR' },
-      { left: '15%', bottom: '23%', label: 'LTI' },
-      { left: '38%', bottom: '19%', label: 'DFC' },
-      { left: '62%', bottom: '19%', label: 'DFC' },
-      { left: '85%', bottom: '23%', label: 'LTD' },
-      { left: '22%', bottom: '46%', label: 'MED' },
-      { left: '50%', bottom: '40%', label: 'MED' },
-      { left: '78%', bottom: '46%', label: 'MED' },
-      { left: '18%', bottom: '74%', label: 'EI' },
-      { left: '50%', bottom: '82%', label: 'DC' },
-      { left: '82%', bottom: '74%', label: 'ED' }
+      { left: '50%', bottom: '10%', label: 'POR' },
+      { left: '15%', bottom: '22%', label: 'LTI' },
+      { left: '35%', bottom: '20%', label: 'DFC' },
+      { left: '65%', bottom: '20%', label: 'DFC' },
+      { left: '85%', bottom: '22%', label: 'LTD' },
+      { left: '30%', bottom: '50%', label: 'MED' },
+      { left: '50%', bottom: '38%', label: 'MED' },
+      { left: '70%', bottom: '50%', label: 'MED' },
+      { left: '18%', bottom: '78%', label: 'EI' },
+      { left: '50%', bottom: '90%', label: 'DC' },
+      { left: '82%', bottom: '78%', label: 'ED' }
     ],
     '4-4-2': [
-      { left: '50%', bottom: '6%', label: 'POR' },
-      { left: '15%', bottom: '23%', label: 'LTI' },
-      { left: '38%', bottom: '19%', label: 'DFC' },
-      { left: '62%', bottom: '19%', label: 'DFC' },
-      { left: '85%', bottom: '23%', label: 'LTD' },
-      { left: '18%', bottom: '48%', label: 'MED' },
-      { left: '39%', bottom: '42%', label: 'MED' },
-      { left: '61%', bottom: '42%', label: 'MED' },
-      { left: '82%', bottom: '48%', label: 'MED' },
-      { left: '38%', bottom: '76%', label: 'DC' },
-      { left: '62%', bottom: '76%', label: 'DC' }
+      { left: '50%', bottom: '10%', label: 'POR' },
+      { left: '15%', bottom: '22%', label: 'LTI' },
+      { left: '35%', bottom: '20%', label: 'DFC' },
+      { left: '65%', bottom: '20%', label: 'DFC' },
+      { left: '85%', bottom: '22%', label: 'LTD' },
+      { left: '15%', bottom: '52%', label: 'MI' },
+      { left: '35%', bottom: '48%', label: 'MED' },
+      { left: '65%', bottom: '48%', label: 'MED' },
+      { left: '85%', bottom: '52%', label: 'MD' },
+      { left: '35%', bottom: '90%', label: 'DC' },
+      { left: '65%', bottom: '90%', label: 'DC' }
     ],
     '3-5-2': [
-      { left: '50%', bottom: '6%', label: 'POR' },
-      { left: '22%', bottom: '20%', label: 'DFC' },
-      { left: '50%', bottom: '18%', label: 'DFC' },
-      { left: '78%', bottom: '20%', label: 'DFC' },
-      { left: '15%', bottom: '48%', label: 'MED' },
-      { left: '35%', bottom: '42%', label: 'MED' },
-      { left: '50%', bottom: '36%', label: 'MED' },
-      { left: '65%', bottom: '42%', label: 'MED' },
-      { left: '85%', bottom: '48%', label: 'MED' },
-      { left: '36%', bottom: '78%', label: 'DC' },
-      { left: '64%', bottom: '78%', label: 'DC' }
+      { left: '50%', bottom: '10%', label: 'POR' },
+      { left: '25%', bottom: '20%', label: 'DFC' },
+      { left: '50%', bottom: '20%', label: 'DFC' },
+      { left: '75%', bottom: '20%', label: 'DFC' },
+      { left: '15%', bottom: '52%', label: 'CAI' },
+      { left: '35%', bottom: '48%', label: 'MCD' },
+      { left: '50%', bottom: '38%', label: 'MED' },
+      { left: '65%', bottom: '48%', label: 'MED' },
+      { left: '85%', bottom: '52%', label: 'CAD' },
+      { left: '35%', bottom: '90%', label: 'DC' },
+      { left: '65%', bottom: '90%', label: 'DC' }
     ],
     '4-2-3-1': [
-      { left: '50%', bottom: '6%', label: 'POR' },
-      { left: '15%', bottom: '23%', label: 'LTI' },
-      { left: '38%', bottom: '19%', label: 'DFC' },
-      { left: '62%', bottom: '19%', label: 'DFC' },
-      { left: '85%', bottom: '23%', label: 'LTD' },
-      { left: '33%', bottom: '38%', label: 'MED' },
-      { left: '67%', bottom: '38%', label: 'MED' },
-      { left: '18%', bottom: '68%', label: 'EI' },
-      { left: '50%', bottom: '62%', label: 'MCO' },
-      { left: '82%', bottom: '68%', label: 'ED' },
-      { left: '50%', bottom: '84%', label: 'DC' }
+      { left: '50%', bottom: '10%', label: 'POR' },
+      { left: '15%', bottom: '22%', label: 'LTI' },
+      { left: '35%', bottom: '20%', label: 'DFC' },
+      { left: '65%', bottom: '20%', label: 'DFC' },
+      { left: '85%', bottom: '22%', label: 'LTD' },
+      { left: '35%', bottom: '38%', label: 'MCD' },
+      { left: '65%', bottom: '38%', label: 'MCD' },
+      { left: '50%', bottom: '78%', label: 'MCO' },
+      { left: '15%', bottom: '78%', label: 'MI' },
+      { left: '50%', bottom: '90%', label: 'DC' },
+      { left: '85%', bottom: '78%', label: 'MD' }
     ]
   };
 
@@ -15087,6 +15478,9 @@ function setFillShapes(checked) {
   const chk = document.getElementById('drawing-fill-checkbox');
   if (chk) chk.checked = checked;
   
+  const chkSidebar = document.getElementById('drawing-fill-sidebar');
+  if (chkSidebar) chkSidebar.checked = checked;
+  
   const slider = document.getElementById('drawing-fill-slider');
   const knob = document.getElementById('drawing-fill-knob');
   if (slider && knob) {
@@ -15099,6 +15493,15 @@ function setFillShapes(checked) {
     }
   }
   updateMobileFillButton();
+}
+
+function setAutoDetectShapes(checked) {
+  autoDetectShapes = checked;
+  try {
+    localStorage.setItem('tacticaProAutoDetectShapes', checked ? 'true' : 'false');
+  } catch (e) {}
+  const chk = document.getElementById('drawing-autodetect-checkbox');
+  if (chk) chk.checked = checked;
 }
 
 function toggleMobileFill() {
@@ -16592,18 +16995,18 @@ function generateMasterReport() {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Informe Maestro - ${escapeHTML(teamName)}</title>
-                <style>${printStyles}</style>
+                <title>Informe Maestro - ${escapeHTML(teamName)}<\/title>
+                <style>${printStyles}<\/style>
             </head>
             <body>
                 <div class="no-print" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:20px; text-align:center; font-family:sans-serif;">
-                    <div style="font-size:15px; font-weight:700; color:#333; margin-bottom:8px;">📄 Vista Previa del Informe (Móvil)</div>
-                    <p style="font-size:12px; color:#666; margin:0 0 12px 0;">Pulsa el botón de abajo para imprimir o guardar como PDF en tu dispositivo.</p>
-                    <button onclick="window.print()" style="padding:10px 20px; font-size:14px; font-weight:bold; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
+                    <div style="font-size:15px; font-weight:700; color:#333; margin-bottom:8px;">📄 Vista Previa del Informe (Móvil)<\/div>
+                    <p style="font-size:12px; color:#666; margin:0 0 12px 0;">Pulsa el botón de abajo para imprimir o guardar como PDF en tu dispositivo.<\/p>
+                    <button onclick="window.print()" style="padding:10px 20px; font-size:14px; font-weight:bold; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">🖨️ Imprimir / Guardar PDF<\/button>
                 </div>
                 ${cleanForPrint(masterDiv.innerHTML)}
-            </body>
-            </html>
+            </${'body'}>
+            </${'html'}>
         `;
 
         printWindow.document.write(newDocHtml);
