@@ -8,8 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 
-<link rel="manifest" href="manifest.json">
-
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <title>Tableta Táctica</title>
@@ -22,10 +20,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('App lista para instalar'))
-      .catch(err => console.log('Error al registrar sw:', err));
+  if (window.location.protocol !== 'file:') {
+    // Add manifest dynamically
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'manifest.json';
+    document.head.appendChild(link);
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('App lista para instalar (PWA)'))
+        .catch(err => console.log('Error al registrar sw:', err));
+    }
+  } else {
+    if (window.location.protocol === 'file:') {
+      // Silently disable PWA in file:// protocol to avoid confusing the user
+      // with console warnings.
+    }
   }
 </script>
 
@@ -340,6 +352,8 @@ details.analysis-card > summary, details.squad-filters > summary, details.sb-sec
 details.analysis-card > summary::-webkit-details-marker, details.squad-filters > summary::-webkit-details-marker, details.sb-section > summary::-webkit-details-marker { display: none; }
 details.analysis-card[open] > summary .details-arrow, details.squad-filters[open] > summary .details-arrow, details.sb-section[open] > summary .details-arrow { transform: rotate(-180deg); }
 
+
+
 /* LIGHT THEME POS BADGES OVERRIDES */
 body.light-theme .pos-POR { background: rgba(217,119,6,.15); color: #d97706; border-color: rgba(217,119,6,.3); }
 body.light-theme .pos-DEF, body.light-theme .pos-DFC { background: rgba(100,116,139,.15); color: #64748b; border-color: rgba(100,116,139,.3); }
@@ -569,6 +583,35 @@ body.light-theme .pos-DEL { background: rgba(180,83,9,.15); color: #b45309; bord
 #customization-modal-overlay { z-index: 104; }
 #analysis-modal-overlay { z-index: 105; }
 #best-eleven-modal-overlay { z-index: 105; }
+#ranking-modal-overlay {
+  display: flex !important;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden !important;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.3s;
+  z-index: 150;
+}
+#ranking-modal-overlay.open {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+#ranking-modal-overlay .modal {
+  transform: scale(0.9);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#ranking-modal-overlay.open .modal {
+  transform: scale(1) !important;
+}
+body.mobile-mode #ranking-modal-overlay { padding: 0; }
+body.mobile-mode #ranking-modal-overlay .modal { padding: 20px 16px; width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100% !important; border-radius: 0; border: none; display: flex; flex-direction: column; overflow-y: auto !important; }
 #drawing-options-modal-overlay { z-index: 106; }
 #color-picker-modal-overlay { z-index: 107; }
 #season-modal-overlay { z-index: 107; }
@@ -1321,6 +1364,9 @@ body.read-only-mode .write-control { display: none !important; }
   border-color: var(--border2);
   box-shadow: var(--shadow-md);
 }
+.clickable-stat {
+  cursor: pointer;
+}
 .squad-stat-card .label {
   font-size: 10px;
   font-weight: 700;
@@ -1778,6 +1824,7 @@ body.read-only-mode .write-control { display: none !important; }
               </button>
             </div>
           </div>
+          </div>
         </details>
         
         <!-- SECCIÓN DE NORMAS DE CONVOCATORIA -->
@@ -1798,6 +1845,10 @@ body.read-only-mode .write-control { display: none !important; }
             <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
               <span style="font-size:10px; color:var(--text3); font-weight:600;">Máx. Ventanas:</span>
               <input type="number" id="rule-max-sub-windows" min="0" max="99" value="3" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-top:2px;">
+              <span style="font-size:10px; color:var(--text3); font-weight:600;">Ciclo Amarillas:</span>
+              <input type="number" id="rule-yellow-cycle" min="0" max="99" value="5" oninput="updateActiveRulesFromUI()" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; padding:4px 6px; text-align:center;">
             </div>
           </div>
         </details>
@@ -1875,30 +1926,17 @@ body.read-only-mode .write-control { display: none !important; }
       <div class="squad-header">
         <div class="squad-title">Plantilla del equipo</div>
         <div class="squad-actions-wrapper" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div class="filter-search-wrap" style="position:relative;">
+            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px;">🔍</span>
+            <input type="text" id="filter-search" class="filter-input" placeholder="Buscar jugador..." oninput="updateFilter('search', this.value)" style="width: 160px; padding-left:28px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; height:28px; outline:none; transition: border-color 0.2s;">
+          </div>
           <div class="filter-btn-group" style="padding: 2px;">
             <button class="filter-btn active" id="squad-view-table-btn" onclick="setSquadViewMode('table')" style="padding: 6px 10px; font-size:11px;">📋 Tabla</button>
             <button class="filter-btn" id="squad-view-cards-btn" onclick="setSquadViewMode('cards')" style="padding: 6px 10px; font-size:11px;">🎴 Tarjetas</button>
           </div>
-          <div id="squad-sort-selector-container" class="sort-selector-wrap" style="display:none; gap:6px; align-items:center; background:var(--bg3); padding:6px 12px; border-radius:10px; border:1px solid var(--border); position:relative; z-index:10; transition: all 0.2s;">
-            <label for="squad-sort-selector" style="font-size:10px; color:var(--text3); font-weight:700; letter-spacing:0.05em;">ORDENAR:</label>
-            <select id="squad-sort-selector" class="filter-input squad-sort-select" style="background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text); outline:none; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onchange="setSort(this.value, currentSortDirection)">
-              <option value="conv">Convocatoria</option>
-              <option value="pos">Posición</option>
-              <option value="num">Dorsal</option>
-              <option value="name">Nombre</option>
-              <option value="age">Edad</option>
-              <option value="value">Valor</option>
-              <option value="goals">Goles</option>
-              <option value="assists">Asistencias</option>
-              <option value="matches">Partidos</option>
-              <option value="minutes">Minutos</option>
-            </select>
-            <button id="squad-sort-direction-btn" class="sort-dir-btn" style="background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; transition: all 0.2s;" onclick="toggleSortDirection()" title="Cambiar dirección">
-              <svg id="sort-direction-icon-svg" class="sort-chevron-mobile" viewBox="0 0 24 24" width="12" height="12" style="fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; transition: transform 0.25s;"><polyline points="18 15 12 9 6 15"></polyline></svg>
-            </button>
-          </div>
+          <!-- ORDENAR MOVIDO A FILTROS -->
           <div class="dropdown custom-season-selector-wrapper" style="position: relative;">
-            <button id="season-selector-btn" class="squad-btn" style="background:var(--bg3); border:1px solid var(--border); display:flex; align-items:center; gap:6px; padding:6px 12px;" onclick="toggleDropdown('season-selector-dropdown', event)">
+            <button id="season-selector-btn" class="squad-btn" style="background:var(--bg3); border:1px solid var(--border); color:var(--text); display:flex; align-items:center; gap:6px; padding:6px 12px;" onclick="toggleDropdown('season-selector-dropdown', event)">
               <span style="color:var(--text3); font-size:12px;">📅</span> <span id="season-selector-label" style="font-weight:600;">Actual</span> <span style="font-size:10px; color:var(--text3);">▼</span>
             </button>
             <div id="season-selector-dropdown" class="dropdown-content" style="min-width:200px;">
@@ -1935,9 +1973,26 @@ body.read-only-mode .write-control { display: none !important; }
         <summary style="cursor:pointer; font-weight:600; outline:none; user-select:none; display:flex; align-items:center; gap:6px;">Filtros y Acciones de Plantilla <span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
         <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
           <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-             <div class="filter-search-wrap" style="position:relative;">
-                <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px;">🔍</span>
-                <input type="text" id="filter-search" class="filter-input" placeholder="Buscar jugador..." oninput="updateFilter('search', this.value)" style="width: 200px; padding-left:32px;">
+             <!-- EL BUSCADOR SE HA MOVIDO A LA CABECERA PRINCIPAL -->
+             
+             <!-- ORDENAR (Movido desde cabecera) -->
+             <div id="squad-sort-selector-container" class="sort-selector-wrap" style="display:none; gap:6px; align-items:center; background:var(--bg2); padding:6px 12px; border-radius:10px; border:1px solid var(--border); position:relative; z-index:10; transition: all 0.2s;">
+               <label for="squad-sort-selector" style="font-size:10px; color:var(--text3); font-weight:700; letter-spacing:0.05em;">ORDENAR:</label>
+               <select id="squad-sort-selector" class="filter-input squad-sort-select" style="background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text); outline:none; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onchange="setSort(this.value, currentSortDirection)">
+                 <option value="conv">Convocatoria</option>
+                 <option value="pos">Posición</option>
+                 <option value="num">Dorsal</option>
+                 <option value="name">Nombre</option>
+                 <option value="age">Edad</option>
+                 <option value="value">Valor</option>
+                 <option value="goals">Goles</option>
+                 <option value="assists">Asistencias</option>
+                 <option value="matches">Partidos</option>
+                 <option value="minutes">Minutos</option>
+               </select>
+               <button id="squad-sort-direction-btn" class="sort-dir-btn" style="background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; transition: all 0.2s;" onclick="toggleSortDirection()" title="Cambiar dirección">
+                 <svg id="sort-direction-icon-svg" class="sort-chevron-mobile" viewBox="0 0 24 24" width="12" height="12" style="fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; transition: transform 0.25s;"><polyline points="18 15 12 9 6 15"></polyline></svg>
+               </button>
              </div>
              <div class="filter-btn-group">
                 <button class="filter-btn filter-pos-btn active" data-val="ALL" onclick="updateFilter('position', 'ALL')">Todas</button>
@@ -1994,133 +2049,69 @@ body.read-only-mode .write-control { display: none !important; }
     </div>
 
     <!-- ANÁLISIS -->
-    <div class="panel" id="panel-analisis" style="flex-direction:column;overflow-y:auto;padding:20px;gap:16px;">
-      <div class="squad-header">
-        <div class="squad-title">Análisis de la plantilla</div>
-      </div>
+    
 
-      <!-- CENTRO DE DOCUMENTACIÓN Y EXPORTACIÓN OFICIAL -->
-      <div style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-md); margin-bottom: 16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-              <div style="flex:1; min-width:280px;">
-                  <h3 style="margin:0; font-size:16px; color:var(--text); font-weight:800; display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:20px;">📄</span> Centro de Documentación y Exportación Oficial
-                  </h3>
-                  <p style="margin:4px 0 0 0; font-size:12px; color:var(--text3);">Genera un informe unificado y paginado (A4) con la portada, táctica, análisis IA y dossier de jugadores.</p>
-              </div>
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="sb-btn" style="background:var(--bg3); color:var(--text); border-color:var(--border); padding:8px 12px; font-weight:600; width:auto;" onclick="openAnalysisExportModal()">📊 Gráficos PNG individuales</button>
-                  <button class="sb-btn" style="background:var(--blue); color:white; border-color:var(--blue2); padding:8px 16px; font-weight:700; width:auto; box-shadow:0 4px 10px rgba(59,130,246,0.3);" onclick="generateMasterReport()">📥 Generar Informe Maestro (PDF)</button>
-              </div>
+
+
+
+<div class="panel" id="panel-analisis" style="position:relative;">
+  <div style="flex: 1; overflow-y: auto; width: 100%; padding: 0 16px;">
+    <div style="max-width:1400px; margin:0 auto; padding-bottom:40px; padding-top: 20px;">
+    
+    <div class="squad-header" style="margin-bottom:20px;">
+      <h2 style="font-size:24px; font-weight:800; color:var(--text); letter-spacing:-0.02em; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:28px;">📊</span> Análisis Avanzado
+      </h2>
+      <button id="btn-toggle-analysis-mode" class="sb-btn" style="background:var(--bg3); border-color:var(--border); font-size:13px; font-weight:700;" onclick="toggleAnalysisMode()">
+        📉 Cambiar a Vista Clásica
+      </button>
+    </div>
+
+    <div id="dashboard-container" style="display:flex; flex-direction:column; gap:16px;">
+      <!-- CABECERA: DOCUMENTACIÓN E INFORME EJECUTIVO -->
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);" open>
+        <summary style="font-size:15px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none; color:var(--text);">
+          <span style="font-size:18px;">📄</span> Documentación e Informe Ejecutivo<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span>
+        </summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap:16px; margin-top:16px;">
+          <!-- CENTRO DE DOCUMENTACIÓN Y EXPORTACIÓN OFICIAL -->
+          <div style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm); display:flex; flex-direction:column; gap:12px;">
+            <h4 style="font-size:14px; font-weight:700; color:var(--text); margin:0;">Centro de Exportación</h4>
+            <p style="margin:0; font-size:12px; color:var(--text3); line-height:1.4;">Genera un informe unificado y paginado (A4) con la portada, táctica, análisis IA y dossier de jugadores.</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;">
+              <button class="sb-btn" style="background:var(--bg3); color:var(--text); border-color:var(--border); padding:8px 12px; font-weight:600; flex:1; min-width:140px; justify-content:center;" onclick="openAnalysisExportModal()">📊 PNGs Sueltos</button>
+              <button class="sb-btn" style="background:var(--blue); color:white; border-color:var(--blue2); padding:8px 12px; font-weight:700; flex:1; min-width:140px; box-shadow:0 4px 10px rgba(59,130,246,0.3); justify-content:center;" onclick="generateMasterReport()">📥 PDF Maestro</button>
+            </div>
           </div>
-      </div>
-      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📝 Informe Ejecutivo<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-        <div style="margin-top:12px; display:flex; flex-direction:column;">
-          <div id="narrative-report" style="flex:1; color:var(--text2); background:rgba(31,111,235,0.02); padding:16px; border-radius:8px; border:1px solid var(--border); line-height:1.6; font-size:13px; margin-bottom:12px;"></div>
-          <button class="sb-btn" style="justify-content:center; padding:9px; font-size:13px; background:var(--bg3); color:var(--text); border:1px solid var(--border);" onclick="copyNarrativeReport()" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">📋 Copiar informe al portapapeles</button>
+
+          <!-- INFORME EJECUTIVO -->
+          <div style="display:flex; flex-direction:column; height: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+            <h4 style="font-size:14px; font-weight:700; color:var(--text); margin:0 0 12px 0;">Resumen Narrativo</h4>
+            <div id="narrative-report" style="flex:1; color:var(--text2); background:rgba(31,111,235,0.02); padding:12px; border-radius:8px; border:1px solid var(--border); line-height:1.5; font-size:12px; margin-bottom:10px; overflow-y:auto; max-height:150px;"></div>
+            <button class="sb-btn" style="justify-content:center; padding:8px; font-size:12px; background:var(--bg3); color:var(--text); border:1px solid var(--border); margin-top:auto;" onclick="copyNarrativeReport()" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">📋 Copiar al portapapeles</button>
+          </div>
         </div>
       </details>
-
-      <!-- GRÁFICOS DE RENDIMIENTO -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:16px; margin-bottom: 16px;">
-        <div class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; align-items:center;">
-          <h3 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:16px; display:flex; align-items:center; gap:6px;">🕸️ Atributos de Plantilla</h3>
-          <div style="width:100%; max-width:300px; aspect-ratio:1;"><canvas id="radarChart"></canvas></div>
-        </div>
-        <div class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; align-items:center;">
-          <h3 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:16px; display:flex; align-items:center; gap:6px;">📈 Forma (Últimos 5)</h3>
-          <div style="width:100%; height:250px; display:flex; align-items:center; justify-content:center;"><canvas id="formChart"></canvas></div>
-        </div>
-      </div>
-
       <!-- 2. INFORME GENERAL Y ALERTAS (Lado a lado) -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:16px; align-items:start; margin-bottom: 16px;">
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
-          <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📋 Informe General<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📋 Informe General y Alertas<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:16px; align-items:start; margin-top:16px;">
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">📋 Informe General</h4>
             <div id="analysis-report" style="flex:1; color:var(--text2); line-height:1.6; font-size:13px;"></div>
             <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('demographics')">🔍 Ampliar: Edad y Lateralidad</button>
           </div>
-        </details>
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
-          <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">⚠️ Alertas<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">⚠️ Alertas</h4>
             <div id="analysis-alerts" style="flex:1; display:flex; flex-direction:column; gap:8px; margin:0;"></div>
           </div>
-        </details>
-      </div>
-
-      <!-- 3. ONCE IDEAL POR RENDIMIENTO -->
-      <div id="best-eleven-card" class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <div style="flex:1; min-width:200px;">
-            <h3 style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px; display:flex; align-items:center; gap:6px;">✨ Once Ideal de la Temporada</h3>
-            <div style="font-size:12px; color:var(--text3);">Calcula la alineación más eficiente del equipo basándose en estadísticas y rendimiento.</div>
-          </div>
-          <button class="sb-btn" onclick="openBestElevenModal()" style="background:var(--blue); color:white; border-color:var(--blue2); padding:8px 16px; font-weight:700; font-size:13px; box-shadow:var(--shadow-sm);" onmouseover="this.style.background='#2d7de8'" onmouseout="this.style.background='var(--blue)'">📊 Ver Once Ideal</button>
-        </div>
-      </div>
-
-      <!-- 4. COMPARADOR DE JUGADORES -->
-      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">⚖️ Comparador de Jugadores<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-        <div style="margin-top:12px; display:flex; flex-direction:column;">
-          <div class="compare-selectors-container" style="display:flex; gap:12px; align-items:center; margin-bottom:16px; width:100%;">
-            <select id="compare-p1" class="filter-input" style="flex:1; min-width:120px; font-size:13px; padding:8px; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:8px;" onchange="debouncedRenderComparison()"></select>
-            <span class="compare-vs" style="font-size:13px; font-weight:800; color:var(--text3); flex-shrink:0;">VS</span>
-            <select id="compare-p2" class="filter-input" style="flex:1; min-width:120px; font-size:13px; padding:8px; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:8px;" onchange="debouncedRenderComparison()"></select>
-          </div>
-          <div id="comparison-result"></div>
         </div>
       </details>
-
-      <!-- 5. TOP RENDIMIENTO, DEFENSA/DISCIPLINA Y BALANCE DE LÍNEAS -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:16px; align-items:start; margin-bottom: 16px;">
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
-          <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🔥 Top Rendimiento<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
-            <div id="analysis-top" style="flex:1; display:flex; flex-direction:column; gap:10px; line-height:1.4; font-size:13px;"></div>
-            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('performance')">🔍 Ampliar: Efectividad y Líneas</button>
-          </div>
-        </details>
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
-          <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🛡️ Defensa y Disciplina<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
-            <div id="analysis-defense" style="flex:1; display:flex; flex-direction:column; gap:10px; line-height:1.4; font-size:13px;"></div>
-            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('discipline')">🔍 Ampliar: Riesgo Disciplinario</button>
-          </div>
-        </details>
-        <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm);">
-          <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">⚖️ Balance de Líneas<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-          <div style="margin-top:12px; display:flex; flex-direction:column;">
-            <div id="analysis-balance" style="flex:1;"></div>
-            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('load')">🔍 Ampliar: Carga de Partidos</button>
-          </div>
-        </details>
-      </div>
-
-      <!-- 6. PROFUNDIDAD DE PLANTILLA (Ancho completo) -->
-      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🗂️ Profundidad de Plantilla<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-        <div style="margin-top:12px; display:flex; flex-direction:column;">
-          <div id="analysis-depth"></div>
-        </div>
-      </details>
-
-      <!-- 7. TRAYECTORIA DEL MÍSTER Y VITRINA DE TROFEOS -->
-      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🏆 Trayectoria del Míster y Vitrina de Trofeos<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-        <div style="margin-top:12px;" id="active-team-achievements-analysis">
-          <!-- Se actualizará dinámicamente con renderActiveTeamAchievements() -->
-        </div>
-      </details>
-
       <!-- 8. PREDICCIÓN Y EVOLUCIÓN DE GOLES -->
       <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
         <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🔮 Predicción y Evolución de Goles<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
         <div class="predictions-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:12px; align-items:start; width:100%;">
-          <!-- Widget 1: Probabilidad de Victoria -->
+<!-- Widget 1: Probabilidad de Victoria -->
           <div style="background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; flex-direction:column; align-items:center; gap:8px;">
             <h4 style="margin:0; font-size:12px; color:var(--text2); text-transform:uppercase; letter-spacing:0.03em; align-self:flex-start; font-weight:700;">🔮 Probabilidad Próximo Partido</h4>
             <div id="win-probability-meter-container" style="width:100%; display:flex; justify-content:center; position:relative; min-height:130px; align-items:center;">
@@ -2148,29 +2139,96 @@ body.read-only-mode .write-control { display: none !important; }
             <div style="display:flex; gap:12px; font-size:9px; font-weight:700; justify-content:center; width:100%; margin-top:4px;">
               <span style="display:flex; align-items:center; gap:4px; color:var(--blue2);"><span style="width:8px; height:8px; border-radius:50%; background:#3b82f6;"></span> Puntos Acumulados</span>
             </div>
+        </div>
+        </div>
+      </details>
+      <!-- GRÁFICOS DE RENDIMIENTO -->
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;" open>
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🕸️ Atributos y Forma<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:16px; margin-top: 16px;">
+          <div style="display:flex; flex-direction:column; align-items:center; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border);">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text2); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.03em;">Atributos de Plantilla</h4>
+            <div style="width:100%; max-width:260px; aspect-ratio:1;"><canvas id="radarChart"></canvas></div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:center; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border);">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text2); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.03em;">Forma (Últimos 5)</h4>
+            <div style="width:100%; height:250px; display:flex; align-items:center; justify-content:center;"><canvas id="formChart"></canvas></div>
+          </div>
+        </div>
+      </details>
+      <!-- 5. TOP RENDIMIENTO, DEFENSA/DISCIPLINA Y BALANCE DE LÍNEAS -->
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🔥 Rendimiento, Defensa y Balance<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:16px; align-items:start; margin-top: 16px;">
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">📈 Top Rendimiento</h4>
+            <div id="analysis-top" style="flex:1; display:flex; flex-direction:column; gap:10px; line-height:1.4; font-size:13px;"></div>
+            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('performance')">🔍 Ampliar: Efectividad y Líneas</button>
+          </div>
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">🛡️ Defensa y Disciplina</h4>
+            <div id="analysis-defense" style="flex:1; display:flex; flex-direction:column; gap:10px; line-height:1.4; font-size:13px;"></div>
+            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('discipline')">🔍 Ampliar: Riesgo Disciplinario</button>
+          </div>
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">⚖️ Balance de Líneas</h4>
+            <div id="analysis-balance" style="flex:1;"></div>
+            <button class="sb-btn" style="margin-top:14px; justify-content:center; padding:7px; font-size:12px;" onclick="openAnalysisModal('load')">🔍 Ampliar: Carga de Partidos</button>
+          </div>
+        </div>
+      </details>
+      <!-- 6 Y 7. PROFUNDIDAD Y COMPARADOR -->
+      <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🗂️ Profundidad y Comparador de Plantilla<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap:16px; margin-top: 16px;">
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">🗂️ Profundidad de Plantilla</h4>
+            <div id="analysis-depth"></div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">⚖️ Comparador de Jugadores</h4>
+            <div class="compare-selectors-container" style="display:flex; gap:12px; align-items:center; margin-bottom:16px; width:100%;">
+              <select id="compare-p1" class="filter-input" style="flex:1; min-width:120px; font-size:13px; padding:8px; background:var(--bg2); color:var(--text); border:1px solid var(--border); border-radius:8px;" onchange="debouncedRenderComparison()"></select>
+              <span class="compare-vs" style="font-size:13px; font-weight:800; color:var(--text3); flex-shrink:0;">VS</span>
+              <select id="compare-p2" class="filter-input" style="flex:1; min-width:120px; font-size:13px; padding:8px; background:var(--bg2); color:var(--text); border:1px solid var(--border); border-radius:8px;" onchange="debouncedRenderComparison()"></select>
+            </div>
+            <div id="comparison-result"></div>
           </div>
         </div>
       </details>
 
-      <!-- 9. SELECTOR DE TEMPORADAS HISTÓRICAS -->
+      <!-- 8 Y 9. TRAYECTORIA Y ARCHIVO HISTÓRICO -->
       <details class="analysis-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom: 16px;">
-        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">📜 Archivo Histórico del Club<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
-        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap; background:var(--bg3); padding:10px 14px; border-radius:8px; border:1px solid var(--border);">
-            <div style="font-size:13px; font-weight:700; color:var(--text2);">Selecciona una temporada archivada:</div>
-            <select id="historical-season-selector" class="filter-input" style="padding:6px 12px; font-size:12px; font-weight:600; border-radius:8px; background:var(--bg2); color:var(--text); border:1px solid var(--border);" onchange="renderHistoricalSeasonDetails(this.value)">
-              <!-- Se cargará dinámicamente -->
-            </select>
+        <summary style="font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; outline:none; user-select:none;">🏆 Trayectoria y Archivo Histórico<span class="details-arrow" style="margin-left:auto; font-size:10px; transition:transform 0.2s;">▼</span></summary>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap:16px; margin-top: 16px;">
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">🏆 Trayectoria del Míster y Vitrina de Trofeos</h4>
+            <div id="active-team-achievements-analysis">
+            </div>
           </div>
-          <div id="historical-season-details-container">
-            <!-- Detalles de la temporada histórica seleccionada -->
+
+          <div style="display:flex; flex-direction:column; background:var(--bg3); padding:16px; border-radius:8px; border:1px solid var(--border); height:100%;">
+            <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">📜 Archivo Histórico del Club</h4>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap; background:var(--bg2); padding:10px 14px; border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:13px; font-weight:700; color:var(--text2);">Selecciona una temporada archivada:</div>
+                <select id="historical-season-selector" class="filter-input" style="padding:6px 12px; font-size:12px; font-weight:600; border-radius:8px; background:var(--bg3); color:var(--text); border:1px solid var(--border);" onchange="renderHistoricalSeasonDetails(this.value)">
+                  <!-- Se actualizará dinámicamente con renderActiveTeamAchievements() -->
+                </select>
+              </div>
+              <div id="historical-season-details-container">
+                <!-- Detalles de la temporada histórica seleccionada -->
+              </div>
+            </div>
           </div>
         </div>
       </details>
     </div>
   </div>
-
-  </div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- MODAL EDITAR JUGADOR -->
@@ -2198,29 +2256,29 @@ body.read-only-mode .write-control { display: none !important; }
       <div style="background: var(--bg3); padding: 16px; border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border);">
         <h4 style="font-size: 12px; color: var(--blue2); margin-bottom: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; padding-bottom: 4px; border-bottom: 1px solid var(--border);">👤 Datos Personales</h4>
         <div class="modal-fields semi-compact">
-          <div class="modal-field full-mobile"><label>Nombre</label><input type="text" id="edit-name" oninput="updatePlayerModalPreview()"></div>
-          <div class="modal-field full-mobile"><label>Dorsal</label>
+          <div class="modal-field full-mobile"><label for="edit-name">Nombre</label><input type="text" id="edit-name" oninput="updatePlayerModalPreview()"></div>
+          <div class="modal-field full-mobile"><label for="edit-num">Dorsal</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-num').stepDown(); updatePlayerModalPreview();">-</button>
               <input type="number" id="edit-num" min="1" max="99" oninput="updatePlayerModalPreview()">
               <button type="button" onclick="document.getElementById('edit-num').stepUp(); updatePlayerModalPreview();">+</button>
             </div>
           </div>
-          <div class="modal-field full-mobile"><label>Edad</label>
+          <div class="modal-field full-mobile"><label for="edit-age">Edad</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-age').stepDown()">-</button>
               <input type="number" id="edit-age" min="15" max="50">
               <button type="button" onclick="document.getElementById('edit-age').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field full-mobile"><label>Valor de mercado (M€)</label>
+          <div class="modal-field full-mobile"><label for="edit-value">Valor de mercado (M€)</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-value').stepDown()">-</button>
               <input type="number" id="edit-value" min="0" step="0.1">
               <button type="button" onclick="document.getElementById('edit-value').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field full-mobile"><label>Posición</label>
+          <div class="modal-field full-mobile"><label for="edit-pos">Posición</label>
             <select id="edit-pos" onchange="document.querySelectorAll('.gk-only').forEach(el => el.style.display = this.value === 'POR' ? 'flex' : 'none'); updatePlayerModalPreview();" style="width: 100%;">
               <option value="POR">🧤 POR – Portero</option>
               <option value="DFC">🛡️ DFC – Defensa Central</option>
@@ -2238,14 +2296,14 @@ body.read-only-mode .write-control { display: none !important; }
               <option value="DEL">⚽ DEL – Delantero Centro</option>
             </select>
           </div>
-          <div class="modal-field full-mobile"><label>Pierna</label>
+          <div class="modal-field full-mobile"><label for="edit-foot">Pierna</label>
             <select id="edit-foot" style="width: 100%;">
               <option value="D">👟 Derecha</option>
               <option value="I">👟 Izquierda</option>
               <option value="A">👟 Ambidiestro</option>
             </select>
           </div>
-          <div class="modal-field full-mobile"><label>Nacionalidad</label>
+          <div class="modal-field full-mobile"><label for="edit-nationality">Nacionalidad</label>
             <input type="text" id="edit-nationality" list="nationality-list" placeholder="🔍 Escribe o selecciona país..." autocomplete="off">
             <datalist id="nationality-list"></datalist>
           </div>
@@ -2255,28 +2313,28 @@ body.read-only-mode .write-control { display: none !important; }
       <details open style="background: var(--bg3); padding: 16px; border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border);">
         <summary style="font-size: 12px; color: var(--blue2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; outline: none; user-select: none; padding-bottom: 4px; border-bottom: 1px solid var(--border);">📋 Estado, Roles y Contrato 🔽</summary>
         <div class="modal-fields semi-compact" style="margin-top: 14px;">
-          <div class="modal-field full-mobile"><label>🏥 Estado Físico</label>
+          <div class="modal-field full-mobile"><label for="edit-injured">🏥 Estado Físico</label>
             <button type="button" id="btn-modal-injured" onclick="toggleModalInjured()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--green3); background: rgba(16,185,129,0.1); color: var(--green3); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;">✅ Disponible</button>
             <input type="hidden" id="edit-injured" value="false">
           </div>
-          <div class="modal-field full-mobile"><label>⚖️ Disciplina</label>
+          <div class="modal-field full-mobile"><label for="edit-suspended">⚖️ Disciplina</label>
             <button type="button" id="btn-modal-suspended" onclick="toggleModalSuspended()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--green3); background: rgba(16,185,129,0.1); color: var(--green3); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;">✅ Disponible</button>
             <input type="hidden" id="edit-suspended" value="false">
           </div>
-          <div class="modal-field full-mobile"><label>🎖️ Rol en el equipo</label>
+          <div class="modal-field full-mobile"><label for="edit-captain">🎖️ Rol en el equipo</label>
             <select id="edit-captain" style="width: 100%;" onchange="updatePlayerModalPreview()">
               <option value="false">👤 Jugador de plantilla</option>
               <option value="true">©️ Capitán</option>
             </select>
           </div>
-          <div class="modal-field full-mobile"><label>📝 Situación de Contrato</label>
+          <div class="modal-field full-mobile"><label for="edit-loan">📝 Situación de Contrato</label>
             <select id="edit-loan" style="width: 100%;" onchange="updatePlayerModalPreview()">
               <option value="none">📝 En propiedad</option>
               <option value="in">🤝 Cedido en mi equipo</option>
               <option value="out">✈️ Cedido a otro equipo</option>
             </select>
           </div>
-          <div class="modal-field full full-mobile"><label>Otras posiciones (hasta 3)</label>
+          <div class="modal-field full full-mobile"><label for="edit-alt-pos-1">Otras posiciones (hasta 3)</label>
             <div class="alt-pos-container" style="display:flex; gap:8px;">
               <select id="edit-alt-pos-1" style="flex:1;"><option value="">- 1ª Alternativa -</option><option value="POR">POR</option><option value="DFC">DFC</option><option value="LTD">LTD</option><option value="LTI">LTI</option><option value="CAD">CAD</option><option value="CAI">CAI</option><option value="MCD">MCD</option><option value="MD">MD</option><option value="MED">MED</option><option value="MI">MI</option><option value="MCO">MCO</option><option value="EXTD">EXTD</option><option value="EXTI">EXTI</option><option value="DEL">DEL</option></select>
               <select id="edit-alt-pos-2" style="flex:1;"><option value="">- 2ª Alternativa -</option><option value="POR">POR</option><option value="DFC">DFC</option><option value="LTD">LTD</option><option value="LTI">LTI</option><option value="CAD">CAD</option><option value="CAI">CAI</option><option value="MCD">MCD</option><option value="MD">MD</option><option value="MED">MED</option><option value="MI">MI</option><option value="MCO">MCO</option><option value="EXTD">EXTD</option><option value="EXTI">EXTI</option><option value="DEL">DEL</option></select>
@@ -2289,28 +2347,28 @@ body.read-only-mode .write-control { display: none !important; }
       <details open style="background: var(--bg3); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
         <summary style="font-size: 12px; color: var(--blue2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; outline: none; user-select: none; padding-bottom: 4px; border-bottom: 1px solid var(--border);">Estadísticas 🔽</summary>
         <div class="modal-fields semi-compact" style="margin-top: 14px;">
-          <div class="modal-field full-mobile"><label>Partidos Jugados (PJ)</label>
+          <div class="modal-field full-mobile"><label for="edit-matches">Partidos Jugados (PJ)</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-matches').stepDown()">-</button>
               <input type="number" id="edit-matches" min="0">
               <button type="button" onclick="document.getElementById('edit-matches').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Titular</label>
+          <div class="modal-field"><label for="edit-starts">Titular</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-starts').stepDown(); document.getElementById('edit-matches').stepDown();">-</button>
               <input type="number" id="edit-starts" min="0">
               <button type="button" onclick="document.getElementById('edit-starts').stepUp(); document.getElementById('edit-matches').stepUp();">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Suplente</label>
+          <div class="modal-field"><label for="edit-subs">Suplente</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-subs').stepDown(); document.getElementById('edit-matches').stepDown();">-</button>
               <input type="number" id="edit-subs" min="0">
               <button type="button" onclick="document.getElementById('edit-subs').stepUp(); document.getElementById('edit-matches').stepUp();">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Minutos</label>
+          <div class="modal-field"><label for="edit-minutes">Minutos</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-minutes').stepDown()">-</button>
               <input type="number" id="edit-minutes" min="0">
@@ -2318,21 +2376,21 @@ body.read-only-mode .write-control { display: none !important; }
             </div>
           </div>
           
-          <div class="modal-field"><label>Goles</label>
+          <div class="modal-field"><label for="edit-goals">Goles</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-goals').stepDown()">-</button>
               <input type="number" id="edit-goals" min="0">
               <button type="button" onclick="document.getElementById('edit-goals').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Asistencias</label>
+          <div class="modal-field"><label for="edit-assists">Asistencias</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-assists').stepDown()">-</button>
               <input type="number" id="edit-assists" min="0">
               <button type="button" onclick="document.getElementById('edit-assists').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field gk-only" style="display:none;"><label>G. Encajados</label>
+          <div class="modal-field gk-only" style="display:none;"><label for="edit-conceded">G. Encajados</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-conceded').stepDown()">-</button>
               <input type="number" id="edit-conceded" min="0">
@@ -2340,21 +2398,21 @@ body.read-only-mode .write-control { display: none !important; }
             </div>
           </div>
           
-          <div class="modal-field gk-only" style="display:none;"><label>Porterías a 0</label>
+          <div class="modal-field gk-only" style="display:none;"><label for="edit-cleanSheets">Porterías a 0</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-cleanSheets').stepDown()">-</button>
               <input type="number" id="edit-cleanSheets" min="0">
               <button type="button" onclick="document.getElementById('edit-cleanSheets').stepUp()">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Amarillas</label>
+          <div class="modal-field"><label for="edit-yellow">Amarillas</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-yellow').stepDown(); checkModalSuspension();">-</button>
               <input type="number" id="edit-yellow" min="0" oninput="checkModalSuspension()">
               <button type="button" onclick="document.getElementById('edit-yellow').stepUp(); checkModalSuspension();">+</button>
             </div>
           </div>
-          <div class="modal-field"><label>Rojas</label>
+          <div class="modal-field"><label for="edit-red">Rojas</label>
             <div class="stepper-ctrl">
               <button type="button" onclick="document.getElementById('edit-red').stepDown(); checkModalSuspension();">-</button>
               <input type="number" id="edit-red" min="0" oninput="checkModalSuspension()">
@@ -2377,7 +2435,7 @@ body.read-only-mode .write-control { display: none !important; }
     <h3>Editar Entrenador</h3>
     <div class="modal-fields">
       <div class="modal-field">
-        <label>Nombre del entrenador</label>
+        <label for="coach-modal-name">Nombre del entrenador</label>
         <input type="text" id="coach-modal-name">
       </div>
     </div>
@@ -2449,11 +2507,11 @@ body.read-only-mode .write-control { display: none !important; }
     </div>
     <div class="modal-fields">
       <div class="modal-field full">
-        <label>Nombre para archivar la temporada actual</label>
+        <label for="season-old-name">Nombre para archivar la temporada actual</label>
         <input type="text" id="season-old-name" placeholder="Ej: Temporada 2023/2024">
       </div>
       <div class="modal-field full">
-        <label>Nombre de la NUEVA temporada</label>
+        <label for="season-new-name">Nombre de la NUEVA temporada</label>
         <input type="text" id="season-new-name" placeholder="Ej: Temporada 2024/2025">
       </div>
     </div>
@@ -2490,7 +2548,7 @@ body.read-only-mode .write-control { display: none !important; }
     <div class="modal-fields">
       <input type="hidden" id="formation-modal-idx" value="-1">
       <div class="modal-field">
-        <label>Nombre de la pizarra</label>
+        <label for="formation-modal-name">Nombre de la pizarra</label>
         <input type="text" id="formation-modal-name" placeholder="Ej: Saque de esquina, Táctica defensiva...">
       </div>
     </div>
@@ -2522,15 +2580,15 @@ body.read-only-mode .write-control { display: none !important; }
           <div style="font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 8px;">👕 Jugadores de Campo</div>
           <div class="modal-fields" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Principal</label>
+              <label for="token-color-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Principal</label>
               <input type="color" id="token-color-picker" value="#da3633" onchange="updateTokenStyle()" style="height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 100%;">
             </div>
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Secundario</label>
+              <label for="token-color2-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Secundario</label>
               <input type="color" id="token-color2-picker" value="#ffffff" onchange="updateTokenStyle()" style="height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 100%;">
             </div>
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Diseño / Patrón</label>
+              <label for="token-pattern-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Diseño / Patrón</label>
               <select id="token-pattern-picker" onchange="updateTokenStyle()" style="height: 34px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0 4px; width: 100%; font-size: 12px;">
                 <option value="solid">Liso</option>
                 <option value="stripes">Rayas</option>
@@ -2547,15 +2605,15 @@ body.read-only-mode .write-control { display: none !important; }
           <div style="font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 8px;">🧤 Guardameta (Portero)</div>
           <div class="modal-fields" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Principal</label>
+              <label for="gk-color-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Principal</label>
               <input type="color" id="gk-color-picker" value="#eab308" onchange="updateTokenStyle()" style="height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 100%;">
             </div>
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Secundario</label>
+              <label for="gk-color2-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Color Secundario</label>
               <input type="color" id="gk-color2-picker" value="#ffffff" onchange="updateTokenStyle()" style="height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 100%;">
             </div>
             <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Diseño / Patrón</label>
+              <label for="gk-pattern-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Diseño / Patrón</label>
               <select id="gk-pattern-picker" onchange="updateTokenStyle()" style="height: 34px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0 4px; width: 100%; font-size: 12px;">
                 <option value="solid">Liso</option>
                 <option value="stripes">Rayas</option>
@@ -2570,11 +2628,11 @@ body.read-only-mode .write-control { display: none !important; }
         <!-- Otros visuales -->
         <div style="border-top: 1px dashed var(--border); padding-top: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Fondo de Alineación</label>
+            <label for="lineup-bg-picker" style="font-size: 10px; color: var(--text3); font-weight: 700;">Fondo de Alineación</label>
             <input type="color" id="lineup-bg-picker" value="#1e3a8a" onchange="updateTokenStyle()" style="height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 100%;">
           </div>
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 10px; color: var(--text3); font-weight: 700;">Escudo del Equipo</label>
+            <label for="logo-upload" style="font-size: 10px; color: var(--text3); font-weight: 700;">Escudo del Equipo</label>
             <div style="display:flex; gap:8px;">
               <input type="file" id="logo-upload" accept="image/*" style="position:absolute; width:0; height:0; opacity:0; z-index:-1;" onchange="handleLogoUpload(event)">
               <button class="sb-btn" onclick="document.getElementById('logo-upload').click()" style="flex:1; justify-content:center; padding: 8px; font-size: 11px; height: 34px;">Subir</button>
@@ -2589,7 +2647,7 @@ body.read-only-mode .write-control { display: none !important; }
         <h4 style="margin: 0 0 6px 0; font-size: 14px; color: var(--green3); text-transform: uppercase; letter-spacing: 0.05em;">🏟️ Ajustes Generales y Campo</h4>
         <div class="settings-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 11px; color: var(--text3); font-weight: 700;">Tema Visual</label>
+            <label for="setting-theme-picker" style="font-size: 11px; color: var(--text3); font-weight: 700;">Tema Visual</label>
             <select id="setting-theme-picker" onchange="applySettingTheme(this.value)" style="height: 38px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0 8px;">
               <option value="dark">Oscuro 🌙</option>
               <option value="light">Claro ☀️</option>
@@ -2597,7 +2655,7 @@ body.read-only-mode .write-control { display: none !important; }
             </select>
           </div>
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 11px; color: var(--text3); font-weight: 700;">Corte del Césped</label>
+            <label for="grass-pattern-picker" style="font-size: 11px; color: var(--text3); font-weight: 700;">Corte del Césped</label>
             <select id="grass-pattern-picker" onchange="updateGrassPattern()" style="height: 38px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0 8px;">
               <option value="stripes">Bandas Clásicas</option>
               <option value="circular">Circular Concéntrico</option>
@@ -2608,7 +2666,7 @@ body.read-only-mode .write-control { display: none !important; }
             </select>
           </div>
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 11px; color: var(--text3); font-weight: 700;">Tipografía de la App</label>
+            <label for="font-family-picker" style="font-size: 11px; color: var(--text3); font-weight: 700;">Tipografía de la App</label>
             <select id="font-family-picker" onchange="updateAppFont()" style="height: 38px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0 8px;">
               <option value="classic">Clásica (Inter/System)</option>
               <option value="premium">Premium (Outfit)</option>
@@ -2631,7 +2689,7 @@ body.read-only-mode .write-control { display: none !important; }
 
 
           <div class="modal-field" style="display: flex; flex-direction: column; gap: 6px; grid-column: span 2; border-top: 1px solid var(--border); padding-top:12px; margin-top:4px;">
-            <label style="font-size: 11px; color: var(--text3); font-weight: 700;">Gestión de Equipos</label>
+            <div style="font-size: 11px; color: var(--text3); font-weight: 700; margin-bottom: 6px;">Gestión de Equipos</div>
             <button class="sb-btn" onclick="closeCustomizationModal(); setTimeout(showMainMenu, 50);" style="justify-content:center; padding: 10px; font-size: 13px; color: var(--blue2); border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); width:100%;">
               🔄 Cambiar de Equipo / Volver al Menú Principal
             </button>
@@ -2683,7 +2741,7 @@ body.read-only-mode .write-control { display: none !important; }
         
         <!-- Historial de autoguardados locales para recuperación rápida -->
         <div style="margin-top: 6px;">
-          <label style="font-size: 11px; color: var(--text3); font-weight: 700; display: block; margin-bottom: 6px;">Puntos de Restauración Automáticos (Navegador)</label>
+          <div style="font-size: 11px; color: var(--text3); font-weight: 700; display: block; margin-bottom: 6px;">Puntos de Restauración Automáticos (Navegador)</div>
           <div id="auto-backups-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;">
             <!-- Rellenado por JS -->
           </div>
@@ -2774,7 +2832,10 @@ body.read-only-mode .write-control { display: none !important; }
           <span style="font-size:11px; color:var(--text3); font-weight:600;">⏱️ Máx. Ventanas:</span>
           <input type="number" id="m-rule-max-sub-windows" min="0" max="99" value="3" oninput="updateActiveRulesFromUI(true)" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:11px; padding:6px 8px; text-align:center;">
         </div>
-
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+          <span style="font-size:11px; color:var(--text3); font-weight:600;">🟨 Ciclo Amarillas:</span>
+          <input type="number" id="m-rule-yellow-cycle" min="0" max="99" value="5" oninput="updateActiveRulesFromUI(true)" style="width:65px; background:var(--bg3); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:11px; padding:6px 8px; text-align:center;">
+        </div>
 
       </div>
 
@@ -2968,6 +3029,7 @@ body.read-only-mode .write-control { display: none !important; }
       <div id="match-log-summary" style="font-size: 13px; color: var(--text2); font-weight: 500;">0 Goles | 0 Asistencias | 0 Tarjetas</div>
       <div style="display: flex; gap: 12px;">
         <button id="btn-wizard-prev" class="btn-cancel" onclick="wizardPrev()">Atrás</button>
+        <button id="btn-wizard-fast-save" class="btn-save" onclick="saveMatchLog()" style="display:none; background:var(--green); border-color:var(--green2);">💾 Guardar Cambios</button>
         <button id="btn-wizard-next" class="btn-save" onclick="wizardNext()">Siguiente ➔</button>
       </div>
     </div>
@@ -3032,15 +3094,15 @@ body.read-only-mode .write-control { display: none !important; }
   <div class="modal" style="width: 280px; padding: 20px; display:flex; flex-direction:column; gap:12px;">
     <h3 style="margin:0; font-size:15px; color:var(--text); text-transform:uppercase; border-bottom:1px solid var(--border); padding-bottom:8px; font-weight:700;">🏆 Añadir Trofeo</h3>
     <div style="display:flex; flex-direction:column; gap:4px;">
-      <label style="font-size:11px; color:var(--text3); font-weight:600;">Nombre del Título</label>
+      <label for="trophy-name" style="font-size:11px; color:var(--text3); font-weight:600;">Nombre del Título</label>
       <input type="text" id="trophy-name" placeholder="Ej: LaLiga, Copa del Míster..." style="width:100%; background:var(--bg3); border:1px solid var(--border); padding:6px 10px; border-radius:6px; color:var(--text); font-size:12px;">
     </div>
     <div style="display:flex; flex-direction:column; gap:4px;">
-      <label style="font-size:11px; color:var(--text3); font-weight:600;">Año / Temporada</label>
+      <label for="trophy-year" style="font-size:11px; color:var(--text3); font-weight:600;">Año / Temporada</label>
       <input type="text" id="trophy-year" placeholder="Ej: 2026, 25/26..." style="width:100%; background:var(--bg3); border:1px solid var(--border); padding:6px 10px; border-radius:6px; color:var(--text); font-size:12px;">
     </div>
     <div style="display:flex; flex-direction:column; gap:4px;">
-      <label style="font-size:11px; color:var(--text3); font-weight:600;">Icono</label>
+      <label for="trophy-icon" style="font-size:11px; color:var(--text3); font-weight:600;">Icono</label>
       <select id="trophy-icon" style="width:100%; background:var(--bg3); border:1px solid var(--border); padding:6px 8px; border-radius:6px; color:var(--text); font-size:12px; height:34px;">
         <option value="🏆">🏆 Copa Dorada</option>
         <option value="🥇">🥇 Medalla de Oro</option>
@@ -3152,6 +3214,25 @@ body.read-only-mode .write-control { display: none !important; }
   </div>
 </div>
 
+<!-- RANKING MODAL -->
+<div id="ranking-modal-overlay" onclick="if(event.target.id==='ranking-modal-overlay') closeRankingModal()">
+  <div class="modal" style="width: 400px; padding: 24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+       <h3 id="ranking-modal-title" style="font-size: 16px; color: var(--text); font-weight:700;">🏆 Ranking</h3>
+       <div style="display:flex; gap:8px;">
+         <button class="btn-icon" onclick="toggleRankingOrder()" title="Invertir Orden" style="padding:4px; font-size:16px;">🔄</button>
+         <button class="btn-icon" onclick="closeRankingModal()" style="padding:4px; font-size:16px;">❌</button>
+       </div>
+    </div>
+    <div id="ranking-list-container" style="display:flex; flex-direction:column; gap:8px; max-height: 400px; overflow-y:auto; padding-right:4px;">
+      <!-- Dinámico -->
+    </div>
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn-cancel" onclick="closeRankingModal()" style="width:100%; justify-content:center;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MENU PRINCIPAL -->
 <div id="main-menu-overlay">
   <div style="position: absolute; top: 16px; right: 24px; display: flex; gap: 8px; z-index: 10;">
@@ -3190,17 +3271,17 @@ body.read-only-mode .write-control { display: none !important; }
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="modal-fields" style="grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="modal-field">
-            <label>Nombre del Equipo</label>
+            <label for="new-team-name">Nombre del Equipo</label>
             <input type="text" id="new-team-name" placeholder="Ej: Real Madrid, FC Barcelona..." onkeypress="if(event.key === 'Enter') createNewTeam()">
           </div>
           <div class="modal-field">
-            <label>Nombre del Entrenador (Míster)</label>
+            <label for="new-team-coach">Nombre del Entrenador (Míster)</label>
             <input type="text" id="new-team-coach" value="Míster" placeholder="Tu nombre...">
           </div>
         </div>
         
         <div class="modal-field">
-          <label>Diseño del Equipo (Preset)</label>
+          <label for="new-team-preset">Diseño del Equipo (Preset)</label>
           <select id="new-team-preset" onchange="applyTeamPreset(this.value)">
             <option value="custom">⚙️ Personalizado</option>
             <option value="classic" selected>🔴 Clásico (Rojo/Blanco)</option>
@@ -3214,22 +3295,22 @@ body.read-only-mode .write-control { display: none !important; }
 
         <div class="modal-fields" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
           <div class="modal-field">
-            <label>Color Camiseta</label>
+            <label for="new-team-color">Color Camiseta</label>
             <input type="color" id="new-team-color" value="#da3633" onchange="document.getElementById('new-team-preset').value = 'custom'">
           </div>
           <div class="modal-field">
-            <label>Color Secundario</label>
+            <label for="new-team-color2">Color Secundario</label>
             <input type="color" id="new-team-color2" value="#ffffff" onchange="document.getElementById('new-team-preset').value = 'custom'">
           </div>
           <div class="modal-field">
-            <label>Color Portero</label>
+            <label for="new-team-gk-color">Color Portero</label>
             <input type="color" id="new-team-gk-color" value="#eab308" onchange="document.getElementById('new-team-preset').value = 'custom'">
           </div>
         </div>
 
         <div class="modal-fields" style="grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="modal-field">
-            <label>Patrón de Camiseta</label>
+            <label for="new-team-pattern">Patrón de Camiseta</label>
             <select id="new-team-pattern" onchange="document.getElementById('new-team-preset').value = 'custom'">
               <option value="solid" selected>Liso</option>
               <option value="stripes">Rayas verticales</option>
@@ -3239,7 +3320,7 @@ body.read-only-mode .write-control { display: none !important; }
             </select>
           </div>
           <div class="modal-field">
-            <label>Formación Inicial</label>
+            <label for="new-team-formation">Formación Inicial</label>
             <select id="new-team-formation">
               <option value="4-3-3">4-3-3</option>
               <option value="4-4-2">4-4-2</option>
@@ -3253,7 +3334,7 @@ body.read-only-mode .write-control { display: none !important; }
 
         <div class="modal-fields" style="grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="modal-field">
-            <label>Escudo / Emoji Inicial</label>
+            <label for="new-team-emoji">Escudo / Emoji Inicial</label>
             <select id="new-team-emoji" onchange="document.getElementById('new-team-preset').value = 'custom'">
               <option value="🛡️">🛡️ Escudo</option>
               <option value="⚽">⚽ Balón</option>
@@ -3271,7 +3352,7 @@ body.read-only-mode .write-control { display: none !important; }
           </div>
           
           <div class="modal-field">
-            <label>Escudo (Archivo de Imagen)</label>
+            <label for="new-team-logo-upload">Escudo (Archivo de Imagen)</label>
             <div style="display:flex; gap:8px; align-items:center;">
               <input type="file" id="new-team-logo-upload" accept="image/*" style="display:none;" onchange="handleNewTeamLogoUpload(event)">
               <button type="button" class="sb-btn" onclick="document.getElementById('new-team-logo-upload').click()" style="flex:1; justify-content:center; padding: 10px; font-size: 13px; height: 38px;">
@@ -3791,6 +3872,28 @@ function showAutosaveIndicator(show) {
   }
 }
 
+// ==================== DATA COMPRESSION ====================
+async function compressString(str) {
+  if (typeof CompressionStream === 'undefined') return str;
+  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('deflate'));
+  const compressed = await new Response(stream).arrayBuffer();
+  let binary = '';
+  const bytes = new Uint8Array(compressed);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
+  return btoa(binary);
+}
+
+async function decompressString(base64Str) {
+  if (typeof DecompressionStream === 'undefined') return base64Str;
+  const binary = atob(base64Str);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) { bytes[i] = binary.charCodeAt(i); }
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return await new Response(stream).text();
+}
+
 function setLocalStorage(key, data) {
   try {
     localStorage.setItem(key, data);
@@ -4082,6 +4185,9 @@ async function loadInitialData() {
       let parsedData = null;
       if (saved) {
         try {
+          if (saved.startsWith('zip::')) {
+            saved = await decompressString(saved.substring(5));
+          }
           parsedData = JSON.parse(saved);
         } catch (e) {
           console.warn('Datos principales corruptos. Intentando recuperar Auto-Backup...');
@@ -4514,9 +4620,19 @@ function selectTeam(teamId) {
 }
 
 let saveTimeout = null;
-function executeSave() {
+async function executeSave() {
   showAutosaveIndicator(true);
-  setLocalStorage('tacticaProAppData_v2', JSON.stringify(appData));
+  try {
+    const jsonString = JSON.stringify(appData);
+    if (jsonString.length > 300000 && typeof CompressionStream !== 'undefined') {
+      const compressed = await compressString(jsonString);
+      setLocalStorage('tacticaProAppData_v2', 'zip::' + compressed);
+    } else {
+      setLocalStorage('tacticaProAppData_v2', jsonString);
+    }
+  } catch (e) {
+    setLocalStorage('tacticaProAppData_v2', JSON.stringify(appData));
+  }
   saveTimeout = null;
   
   // Crear punto de restauración automático si han pasado 5 minutos
@@ -6326,9 +6442,9 @@ canvas.addEventListener('mouseleave', () => {
 });
 
 // Touch support
-canvas.addEventListener('touchstart', e => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, buttons: 1, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
-canvas.addEventListener('touchmove', e => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, buttons: 1, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
-canvas.addEventListener('touchend', e => { e.preventDefault(); const t = e.changedTouches[0]; canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, buttons: 1, clientX: t.clientX, clientY: t.clientY })); }, { passive: false });
+canvas.addEventListener('touchstart', e => { if (drawingTool) e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, buttons: 1, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+canvas.addEventListener('touchmove', e => { if (drawingTool || typeof dragP !== 'undefined' && dragP) e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, buttons: 1, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+canvas.addEventListener('touchend', e => { if (drawingTool || typeof dragP !== 'undefined' && dragP) e.preventDefault(); const t = e.changedTouches[0]; canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, buttons: 1, clientX: t.clientX, clientY: t.clientY })); }, { passive: false });
 
 // ==================== TOOLS ====================
 function setTool(t) {
@@ -9258,28 +9374,58 @@ function renderSquadStats() {
   const avgAge = total > 0 ? (players.reduce((s, p) => s + (p.age || 22), 0) / total).toFixed(1) : '—';
   const totalValue = players.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
   const formattedValue = totalValue > 0 ? `€${totalValue.toFixed(1).replace(/\.0$/, '')}M` : '—';
+  const team = appData.teams.find(t => t.id === activeTeamId);
+  const history = team ? (team.matchHistory || []) : [];
+  const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const last5 = sortedHistory.slice(0, 5).reverse(); // Reverse so newest is on the right
+  
+  let rachaDots = '';
+  if (last5.length > 0) {
+    last5.forEach(m => {
+      let bg, letter, resultName;
+      if (m.result === 'W') { bg = '#10b981'; letter = 'V'; resultName = 'Victoria'; }
+      else if (m.result === 'L') { bg = '#ef4444'; letter = 'D'; resultName = 'Derrota'; }
+      else { bg = '#f59e0b'; letter = 'E'; resultName = 'Empate'; }
+      
+      const tooltipText = `${m.date} - ${resultName} vs ${m.opponent} (${m.goalsFor}-${m.goalsAgainst})`;
+      rachaDots += `
+        <div style="width:20px; height:20px; border-radius:50%; background:${bg}; color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:10px; cursor:pointer;" title="${tooltipText.replace(/"/g, '&quot;')}">
+          ${letter}
+        </div>
+      `;
+    });
+  } else {
+    rachaDots = `<div style="font-size:11px; color:var(--text3); font-style:italic;">Sin partidos</div>`;
+  }
+
   statsContainer.innerHTML = `
     <div class="squad-stat-card">
       <span class="label">Plantilla</span>
       <span class="value">🛡️ ${total}</span>
     </div>
-    <div class="squad-stat-card">
+    <div class="squad-stat-card" style="min-width: 130px;">
+      <span class="label">Racha (Últ. 5)</span>
+      <div style="display:flex; gap:4px; margin-top:2px;">
+        ${rachaDots}
+      </div>
+    </div>
+    <div class="squad-stat-card clickable-stat" onclick="openRankingModal('goals', 'Goles', false)" title="Ver Ranking de Goles">
       <span class="label">Goles</span>
       <span class="value">⚽ ${goals}</span>
     </div>
-    <div class="squad-stat-card">
+    <div class="squad-stat-card clickable-stat" onclick="openRankingModal('assists', 'Asistencias', false)" title="Ver Ranking de Asistencias">
       <span class="label">Asistencias</span>
       <span class="value">🅰️ ${assists}</span>
     </div>
-    <div class="squad-stat-card">
+    <div class="squad-stat-card clickable-stat" onclick="openRankingModal('cleanSheets', 'Porterías a Cero', false)" title="Ver Ranking de Porterías a Cero">
       <span class="label">Portería a Cero</span>
       <span class="value">🧤 ${cleanSheets}</span>
     </div>
-    <div class="squad-stat-card">
+    <div class="squad-stat-card clickable-stat" onclick="openRankingModal('age', 'Edad', true)" title="Ver Ranking de Edad">
       <span class="label">Edad Media</span>
       <span class="value">📅 ${avgAge}</span>
     </div>
-    <div class="squad-stat-card">
+    <div class="squad-stat-card clickable-stat" onclick="openRankingModal('value', 'Valor de Mercado', false)" title="Ver Ranking de Valor de Mercado">
       <span class="label">Valor Total</span>
       <span class="value">💰 ${formattedValue}</span>
     </div>
@@ -9578,8 +9724,10 @@ function updateWizardUI() {
 
   const btnPrev = document.getElementById('btn-wizard-prev');
   const btnNext = document.getElementById('btn-wizard-next');
+  const btnFastSave = document.getElementById('btn-wizard-fast-save');
   
   if (btnPrev) btnPrev.style.visibility = currentMatch.step === 1 ? 'hidden' : 'visible';
+  if (btnFastSave) btnFastSave.style.display = currentMatch.editingId && currentMatch.step < 9 ? 'inline-block' : 'none';
   if (btnNext) {
     if (currentMatch.step === 9) {
       btnNext.innerHTML = '✅ Guardar partido';
@@ -10518,6 +10666,11 @@ function saveMatchLog() {
         p.red = (p.red || 0) + 1;
         p.isSuspended = true; // Suspensión automática al recibir roja directa
       }
+      
+      const rules = getActiveRules();
+      if (rules.yellowCardCycle > 0 && p.yellow && (p.yellow % rules.yellowCardCycle === 0)) {
+         p.isSuspended = true;
+      }
     }
   });
 
@@ -11435,28 +11588,28 @@ function updateAnalysis() {
              
   // Progress Bar 1: Tactical Fit
   report += `
-  <div style="margin-bottom:12px; border-top:1px solid var(--border); padding-top:10px;">
-    <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:4px; align-items:center;">
-      <span style="font-weight:700;">🎯 Ajuste Táctico:</span>
-      <span style="font-weight:800; color:${fitColor}; font-size:11.5px;">${tacticalFit}% (${fitLabel})</span>
+  <div style="margin-bottom:16px; border-top:1px solid var(--border); padding-top:12px;">
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; align-items:center;">
+      <span style="font-weight:800; display:flex; align-items:center; gap:6px;">🎯 Ajuste Táctico</span>
+      <span style="font-weight:800; color:${fitColor}; font-size:12px; padding:2px 8px; border-radius:6px; background:${fitColor}15;">${tacticalFit}% (${fitLabel})</span>
     </div>
-    <div style="width:100%; height:5px; background:var(--bg3); border-radius:2.5px; overflow:hidden; border:1px solid var(--border);">
-      <div style="width:${tacticalFit}%; height:100%; background:${fitColor}; border-radius:2.5px;"></div>
+    <div style="width:100%; height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; border:1px solid var(--border); box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+      <div style="width:${tacticalFit}%; height:100%; background:${fitColor}; border-radius:4px; box-shadow: 0 0 8px ${fitColor}50;"></div>
     </div>
-    <div style="font-size:10.5px; color:var(--text3); margin-top:3px; line-height:1.2;">${fitRecommendation}</div>
+    <div style="font-size:11px; color:var(--text3); margin-top:5px; line-height:1.3;">${fitRecommendation}</div>
   </div>`;
 
   // Progress Bar 2: Defensive Solidity
   report += `
-  <div style="margin-bottom:12px;">
-    <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:4px; align-items:center;">
-      <span style="font-weight:700;">🛡️ Solidez Defensiva:</span>
-      <span style="font-weight:800; color:${defColor}; font-size:11.5px;">${defSolidity}% (${defLabel})</span>
+  <div style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; align-items:center;">
+      <span style="font-weight:800; display:flex; align-items:center; gap:6px;">🛡️ Solidez Defensiva</span>
+      <span style="font-weight:800; color:${defColor}; font-size:12px; padding:2px 8px; border-radius:6px; background:${defColor}15;">${defSolidity}% (${defLabel})</span>
     </div>
-    <div style="width:100%; height:5px; background:var(--bg3); border-radius:2.5px; overflow:hidden; border:1px solid var(--border);">
-      <div style="width:${defSolidity}%; height:100%; background:${defColor}; border-radius:2.5px;"></div>
+    <div style="width:100%; height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; border:1px solid var(--border); box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+      <div style="width:${defSolidity}%; height:100%; background:${defColor}; border-radius:4px; box-shadow: 0 0 8px ${defColor}50;"></div>
     </div>
-    <div style="font-size:10.5px; color:var(--text3); margin-top:3px; line-height:1.2;">${defRecommendation}</div>
+    <div style="font-size:11px; color:var(--text3); margin-top:5px; line-height:1.3;">${defRecommendation}</div>
   </div>`;
              
   const avgAge = players.length > 0 ? (players.reduce((s, p) => s + (p.age || 22), 0) / players.length).toFixed(1) : '—';
@@ -12486,6 +12639,29 @@ function createComparisonRadarChart(labels, values1, color1, values2, color2, si
   
   svg += `</svg>`;
   return `<div onclick="zoomRadar(this)" style="cursor:pointer;" title="Pulsa para ampliar">${svg}</div>`;
+}
+
+let analysisDashboardMode = false;
+
+function toggleAnalysisMode() {
+    analysisDashboardMode = !analysisDashboardMode;
+    const btn = document.getElementById('btn-toggle-analysis-mode');
+    btn.innerHTML = analysisDashboardMode ? '📉 Cambiar a Vista Clásica' : '✨ Cambiar a Vista Dashboard';
+    
+    const panel = document.getElementById('panel-analisis');
+    if (analysisDashboardMode) {
+        panel.classList.add('dashboard-mode');
+        // Force open all details
+        panel.querySelectorAll('details.analysis-card').forEach(d => {
+            d.setAttribute('open', '');
+        });
+    } else {
+        panel.classList.remove('dashboard-mode');
+        // Close all except the ones that were open? Let's just close all to reset
+        panel.querySelectorAll('details.analysis-card').forEach(d => {
+            d.removeAttribute('open');
+        });
+    }
 }
 
 function openAnalysisModal(type) {
@@ -14877,6 +15053,10 @@ function initAppDOM() {
   if (typeof drawingColor !== 'undefined') {
     setDrawingColor(drawingColor);
   }
+
+  if (typeof toggleAnalysisMode === 'function') {
+    toggleAnalysisMode();
+  }
 }
 
 if (document.readyState === 'loading') {
@@ -14898,14 +15078,16 @@ function getActiveRules() {
       return {
         maxSquad: parsed.maxSquad || 23,
         maxSubs: parsed.maxSubs || 5,
-        maxSubWindows: parsed.maxSubWindows || 3
+        maxSubWindows: parsed.maxSubWindows || 3,
+        yellowCardCycle: parsed.yellowCardCycle !== undefined ? parsed.yellowCardCycle : 5
       };
     } catch (e) {}
   }
   return {
     maxSquad: 23,
     maxSubs: 5,
-    maxSubWindows: 3
+    maxSubWindows: 3,
+    yellowCardCycle: 5
   };
 }
 
@@ -14918,15 +15100,20 @@ function updateActiveRulesFromUI(isMobile = false) {
   // Substitutions variables
   let maxSubs = currentRules.maxSubs || 5;
   let maxSubWindows = currentRules.maxSubWindows || 3;
+  let yellowCardCycle = currentRules.yellowCardCycle !== undefined ? currentRules.yellowCardCycle : 5;
+  
   const elMaxSubs = document.getElementById(`${prefix}rule-max-subs`);
   if (elMaxSubs) maxSubs = parseInt(elMaxSubs.value) || 0;
   const elMaxSubWin = document.getElementById(`${prefix}rule-max-sub-windows`);
   if (elMaxSubWin) maxSubWindows = parseInt(elMaxSubWin.value) || 0;
+  const elYellow = document.getElementById(`${prefix}rule-yellow-cycle`);
+  if (elYellow) yellowCardCycle = parseInt(elYellow.value) || 0;
   
   const rulesObj = {
     maxSquad,
     maxSubs,
-    maxSubWindows
+    maxSubWindows,
+    yellowCardCycle
   };
   competitionRules = JSON.stringify(rulesObj);
   
@@ -14935,10 +15122,12 @@ function updateActiveRulesFromUI(isMobile = false) {
   const elMax = document.getElementById(`${syncPrefix}rule-max-squad`);
   const elSyncMaxSubs = document.getElementById(`${syncPrefix}rule-max-subs`);
   const elSyncMaxSubWin = document.getElementById(`${syncPrefix}rule-max-sub-windows`);
+  const elSyncYellow = document.getElementById(`${syncPrefix}rule-yellow-cycle`);
   
   if (elMax) elMax.value = maxSquad;
   if (elSyncMaxSubs) elSyncMaxSubs.value = maxSubs;
   if (elSyncMaxSubWin) elSyncMaxSubWin.value = maxSubWindows;
+  if (elSyncYellow) elSyncYellow.value = yellowCardCycle;
   
   saveData();
   render(); // trigger validation via requestAnimationFrame
@@ -15031,8 +15220,7 @@ function loadTeamDataIntoUI() {
   document.getElementById('team-header-name').textContent = teamName || 'Mi Equipo';
   const mobileTeamName = document.getElementById('mobile-team-name-text');
   if (mobileTeamName) {
-    const disp = teamName || 'Mi Equipo';
-    mobileTeamName.textContent = disp.length > 13 ? disp.substring(0, 12) + '…' : disp;
+    mobileTeamName.textContent = teamName || 'Mi Equipo';
   }
   document.getElementById('team-header-coach').textContent = coachName;
   document.getElementById('btn-remove-logo').style.display = teamLogo ? 'flex' : 'none';
@@ -15080,7 +15268,8 @@ function loadTeamDataIntoUI() {
   const ruleInputs = [
     { desk: 'rule-max-squad', mob: 'm-rule-max-squad', val: rules.maxSquad },
     { desk: 'rule-max-subs', mob: 'm-rule-max-subs', val: rules.maxSubs },
-    { desk: 'rule-max-sub-windows', mob: 'm-rule-max-sub-windows', val: rules.maxSubWindows }
+    { desk: 'rule-max-sub-windows', mob: 'm-rule-max-sub-windows', val: rules.maxSubWindows },
+    { desk: 'rule-yellow-cycle', mob: 'm-rule-yellow-cycle', val: rules.yellowCardCycle }
   ];
   ruleInputs.forEach(i => {
     const dEl = document.getElementById(i.desk);
@@ -16183,7 +16372,6 @@ function setFillShapes(checked) {
       knob.style.transform = 'translateX(0px)';
     }
   }
-  updateMobileFillButton();
 }
 
 function setAutoDetectShapes(checked) {
@@ -16431,7 +16619,7 @@ function renderActiveTeamAchievements() {
 
   // Racha de partidos interactiva (Last 5) con tooltip premium
   const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const last5 = sortedHistory.slice(0, 5);
+  const last5 = sortedHistory.slice(0, 5).reverse(); // Nuevo a la derecha
   let rachaHtml = '';
   if (last5.length > 0) {
     let dotsHtml = '';
@@ -17668,6 +17856,113 @@ function generateMasterReport() {
         masterDiv.remove();
         style.remove();
     }, 500);
+}
+let currentRankingStat = '';
+let currentRankingTitle = '';
+let currentRankingAsc = false;
+
+function toggleRankingOrder() {
+  if (navigator.vibrate) navigator.vibrate(40);
+  if (currentRankingStat) {
+    openRankingModal(currentRankingStat, currentRankingTitle, !currentRankingAsc);
+  }
+}
+
+// Funciones del modal de ranking
+function openRankingModal(statKey, title, isAscending) {
+  if (navigator.vibrate) navigator.vibrate(40);
+  currentRankingStat = statKey;
+  currentRankingTitle = title;
+  currentRankingAsc = isAscending;
+
+  const modal = document.getElementById('ranking-modal-overlay');
+  const titleEl = document.getElementById('ranking-modal-title');
+  const container = document.getElementById('ranking-list-container');
+  
+  if (!modal || !titleEl || !container) return;
+  
+  const sortIcon = isAscending ? '⬆️' : '⬇️';
+  let dynamicTitle = title;
+  
+  if (statKey === 'age') {
+    dynamicTitle = isAscending ? 'Edad (Más Jóvenes)' : 'Edad (Más Veteranos)';
+  } else if (statKey === 'value') {
+    dynamicTitle = isAscending ? 'Valor (Menos Valiosos)' : 'Valor (Más Valiosos)';
+  } else {
+    // Para goles, asistencias y porterías a cero
+    dynamicTitle = isAscending ? `${title} (Menos a Más)` : `${title} (Más a Menos)`;
+  }
+  
+  titleEl.innerHTML = `🏆 Top 10 - ${dynamicTitle} <span style="font-size:12px; opacity:0.7; margin-left:4px;">${sortIcon}</span>`;
+  container.innerHTML = '';
+  
+  let filteredPlayers = [...players];
+  if (statKey === 'cleanSheets') {
+    const validPositions = ['POR', 'DEF', 'DFC', 'LTD', 'LTI', 'CAD', 'CAI'];
+    filteredPlayers = filteredPlayers.filter(p => validPositions.includes(p.pos));
+  }
+  
+  let sortedPlayers = filteredPlayers.sort((a, b) => {
+    let valA = a[statKey] || 0;
+    let valB = b[statKey] || 0;
+    if (statKey === 'age') {
+       valA = a.age || 99;
+       valB = b.age || 99;
+    }
+    if (statKey === 'value') {
+       valA = parseFloat(a.value) || 0;
+       valB = parseFloat(b.value) || 0;
+    }
+    
+    if (isAscending) {
+      return valA > valB ? 1 : (valA < valB ? -1 : 0);
+    } else {
+      return valA < valB ? 1 : (valA > valB ? -1 : 0);
+    }
+  });
+
+  const top10 = sortedPlayers.slice(0, 10);
+  
+  if (top10.length === 0) {
+     container.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text3); font-weight:600; font-size:13px;">No hay datos suficientes para generar un ranking.</div>';
+  } else {
+     top10.forEach((p, index) => {
+        let displayVal = p[statKey] || 0;
+        if (statKey === 'value') {
+          displayVal = displayVal > 0 ? `€${displayVal}M` : '—';
+        } else if (statKey === 'age') {
+          displayVal = displayVal < 99 ? `${displayVal} años` : '—';
+        }
+        
+        let rankDisplay = `#${index+1}`;
+        let rankColor = 'var(--text3)';
+        let rankSize = '16px';
+        if (index === 0) { rankDisplay = '🥇'; rankColor = '#fbbf24'; rankSize = '20px'; }
+        else if (index === 1) { rankDisplay = '🥈'; rankColor = '#94a3b8'; rankSize = '20px'; }
+        else if (index === 2) { rankDisplay = '🥉'; rankColor = '#b45309'; rankSize = '20px'; }
+
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--bg2); border:1px solid var(--border); border-radius:8px;';
+        item.innerHTML = `
+           <div style="display:flex; align-items:center; gap:12px;">
+             <div style="font-size:${rankSize}; font-weight:800; color:${rankColor}; width:32px; text-align:center;">${rankDisplay}</div>
+             <div>
+               <div style="font-weight:700; font-size:14px; color:var(--text); line-height:1.2;">${p.name}</div>
+               <div style="font-size:11px; color:var(--text2); font-weight:600; margin-top:2px;">${p.pos}</div>
+             </div>
+           </div>
+           <div style="font-weight:800; font-size:16px; color:var(--amber2); background:rgba(251, 191, 36, 0.1); padding:4px 8px; border-radius:6px;">${displayVal}</div>
+        `;
+        container.appendChild(item);
+     });
+  }
+  
+  modal.classList.add('open');
+}
+
+function closeRankingModal() {
+  const modal = document.getElementById('ranking-modal-overlay');
+  if (modal) modal.classList.remove('open');
 }
 </script>
 <div id="radar-zoom-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; align-items:center; justify-content:center; cursor:pointer;" onclick="this.style.display='none'">
